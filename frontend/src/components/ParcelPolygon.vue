@@ -28,7 +28,12 @@ const pathData = computed(() => {
   return `${points} Z`;
 });
 
-const colors = computed(() => statusColors[props.parcel.status] || statusColors.AVAILABLE);
+const colors = computed(() => {
+  if (props.isSelected) {
+    return { fill: 'rgba(59, 130, 246, 0.6)', stroke: '#3b82f6' };
+  }
+  return statusColors[props.parcel.status] || statusColors.AVAILABLE;
+});
 
 
 function handleClick(e: MouseEvent) {

@@ -6,6 +6,7 @@ import ImageUploader from '@/components/ImageUploader.vue';
 import ImageCanvas from '@/components/ImageCanvas.vue';
 import CalibrationTool from '@/components/CalibrationTool.vue';
 import ParcelSidePanel from '@/components/ParcelSidePanel.vue';
+import ParcelTable from '@/components/ParcelTable.vue';
 
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -233,6 +234,7 @@ const hasImage = computed(() => imageDataUrl.value !== null);
                 </p>
               </div>
             </div>
+            <ParcelTable />
           </div>
         </div>
       </template>
