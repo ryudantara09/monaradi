@@ -13,45 +13,23 @@ function extractJSON(content: string): string {
     console.log(content);
     console.log('========================================\n');
 
-    // Try to find JSON in various formats
     let jsonStr = content.trim();
 
-    // 1. Check for markdown JSON code block: ```json ... ```
-    const jsonCodeBlockMatch = content.match(/```json\s*([\s\S]*?)```/i);
-    if (jsonCodeBlockMatch) {
-        console.log('[JSON Extraction] Found JSON code block');
-        return jsonCodeBlockMatch[1]!.trim();
-    }
-
-    // 2. Check for generic code block: ``` ... ```
-    const genericCodeBlockMatch = content.match(/```\s*([\s\S]*?)```/);
-    if (genericCodeBlockMatch) {
-        const potentialJson = genericCodeBlockMatch[1]!.trim();
-        // Check if it looks like JSON
-        if (potentialJson.startsWith('{') || potentialJson.startsWith('[')) {
-            console.log('[JSON Extraction] Found generic code block with JSON');
-            return potentialJson;
+    // aggressive markdown stripping
+    if (jsonStr.startsWith('```')) {
+        // remove first line if it's a code block marker
+        const firstNewLine = jsonStr.indexOf('\n');
+        if (firstNewLine !== -1) {
+            jsonStr = jsonStr.substring(firstNewLine + 1);
         }
     }
 
-    // 3. Look for JSON object pattern anywhere in the response
-    // This handles cases where model outputs reasoning text before/after JSON
-    const jsonObjectMatch = content.match(/\{[\s\S]*"polygons"[\s\S]*\}/);
-    if (jsonObjectMatch) {
-        console.log('[JSON Extraction] Found JSON object pattern in text');
-        return jsonObjectMatch[0];
+    // remove trailing markdown
+    if (jsonStr.endsWith('```')) {
+        jsonStr = jsonStr.substring(0, jsonStr.length - 3);
     }
 
-    // 4. Try to find any JSON-like structure { ... }
-    const anyJsonMatch = content.match(/\{[\s\S]*\}/);
-    if (anyJsonMatch) {
-        console.log('[JSON Extraction] Found generic JSON structure');
-        return anyJsonMatch[0];
-    }
-
-    // 5. Return original content as fallback
-    console.log('[JSON Extraction] No JSON pattern found, returning raw content');
-    return jsonStr;
+    return jsonStr.trim();
 }
 
 // POST /api/detect - AI boundary detection via Google Gemini
@@ -72,7 +50,7 @@ router.post('/', async (req, res) => {
         }
 
         console.log('\n========== GOOGLE GEMINI API REQUEST ==========');
-        console.log('[Gemini] Sending request to gemini-2.5-flash');
+        console.log('[Gemini] Sending request to gemini-3-flash');
         console.log('[Gemini] Image data length:', imageBase64.length);
 
         // Extract the base64 data and mime type from the data URL
@@ -132,10 +110,10 @@ Return valid JSON only:
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview', // More capable model for vision tasks
             contents: contents,
-            config: {
-                // temperature: 0.1, // Low temperature for precise indices
-                maxOutputTokens: 8192,
-            }
+            // config: {
+            //     // temperature: 0.1, // Low temperature for precise indices
+            //     maxOutputTokens: 8192,
+            // }
         });
 
         console.log('[Gemini] Response received');
@@ -155,7 +133,7 @@ Return valid JSON only:
         // Parse the JSON response
         try {
             const jsonStr = extractJSON(content);
-            console.log('\n[JSON Parsing] Attempting to parse:', jsonStr.substring(0, Math.min(jsonStr.length, 200)) + (jsonStr.length > 200 ? '...' : ''));
+            console.log('\n[JSON Parsing] Attempting to parse:', jsonStr);
             const result = JSON.parse(jsonStr);
 
             let polygons: number[][][] = [];
