@@ -43,7 +43,10 @@ function confirmCalibration(distanceMeters: number) {
     
     // Recalculate all parcel areas with the new scale factor
     if (calibrationStore.scaleFactor) {
-      parcelsStore.recalculateAllAreas(calibrationStore.scaleFactor);
+      parcelsStore.recalculateAllAreas(calibrationStore.scaleFactor, {
+        width: calibrationStore.imageWidth,
+        height: calibrationStore.imageHeight
+      });
     }
   }
   showCalibrationDialog.value = false;
@@ -60,7 +63,15 @@ function startDrawing() {
 }
 
 function handlePolygonComplete(points: [number, number][]) {
-  parcelsStore.createParcel(points, calibrationStore.scaleFactor);
+  parcelsStore.createParcel(
+    points, 
+    calibrationStore.scaleFactor, 
+    undefined,
+    {
+      width: calibrationStore.imageWidth,
+      height: calibrationStore.imageHeight
+    }
+  );
   mode.value = 'view';
 }
 
@@ -86,7 +97,15 @@ async function detectBoundaries() {
     if (data.polygons && Array.isArray(data.polygons)) {
       for (const polygon of data.polygons) {
         if (polygon.length >= 3) {
-          parcelsStore.createParcel(polygon, calibrationStore.scaleFactor);
+          parcelsStore.createParcel(
+            polygon, 
+            calibrationStore.scaleFactor,
+            undefined,
+            {
+              width: calibrationStore.imageWidth,
+              height: calibrationStore.imageHeight
+            }
+          );
         }
       }
     }

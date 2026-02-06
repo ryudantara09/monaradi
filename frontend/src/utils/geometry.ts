@@ -6,6 +6,12 @@
 /**
  * Calculate polygon area using the Shoelace formula
  * Returns area in square meters when scaleFactor is provided
+ * 
+ * The scaleFactor represents pixels/meter at the original image dimensions.
+ * For normalized coordinates (0-1), we need to:
+ * 1. Convert normalized coords to pixels using image dimensions
+ * 2. Apply Shoelace formula on pixel coordinates
+ * 3. Convert pixel area to square meters using (scaleFactor)^2
  */
 export function calculatePolygonArea(
     polygon: [number, number][],
@@ -14,32 +20,50 @@ export function calculatePolygonArea(
 ): number {
     if (polygon.length < 3) return 0;
 
-    // Shoelace formula (works with normalized coordinates)
-    let area = 0;
+    // If we have image dimensions, calculate area properly
+    if (imageDimensions && imageDimensions.width > 0 && imageDimensions.height > 0) {
+        // First, convert normalized coordinates to pixel coordinates
+        const pixelPolygon = polygon.map(([x, y]) => [
+            x * imageDimensions.width,
+            y * imageDimensions.height
+        ] as [number, number]);
+
+        // Apply Shoelace formula on pixel coordinates
+        let pixelArea = 0;
+        const n = pixelPolygon.length;
+
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            pixelArea += pixelPolygon[i]![0] * pixelPolygon[j]![1];
+            pixelArea -= pixelPolygon[j]![0] * pixelPolygon[i]![1];
+        }
+
+        pixelArea = Math.abs(pixelArea) / 2;
+
+        // Convert pixel area to square meters
+        // scaleFactor = pixels per meter
+        // Area in m² = pixel area / (pixels/meter)²
+        const areaSqm = pixelArea / (scaleFactor * scaleFactor);
+
+        return areaSqm;
+    }
+
+    // Fallback: use normalized area (less accurate, for cases without dimensions)
+    let normalizedArea = 0;
     const n = polygon.length;
 
     for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
-        area += polygon[i]![0] * polygon[j]![1];
-        area -= polygon[j]![0] * polygon[i]![1];
+        normalizedArea += polygon[i]![0] * polygon[j]![1];
+        normalizedArea -= polygon[j]![0] * polygon[i]![1];
     }
 
-    area = Math.abs(area) / 2;
+    normalizedArea = Math.abs(normalizedArea) / 2;
 
-    // Convert from normalized area to real area
-    // Since coordinates are normalized, we need to scale by image dimensions
-    // and then convert pixels to meters using scaleFactor
-    if (imageDimensions) {
-        // Area in pixels = normalized area * width * height
-        const pixelArea = area * imageDimensions.width * imageDimensions.height;
-        // Area in square meters = pixel area / (scaleFactor^2)
-        return pixelArea / (scaleFactor * scaleFactor);
-    }
-
-    // Fallback: assume unit square mapping
-    // This is a rough approximation
+    // Rough estimate - assumes square image
+    // This is inaccurate for non-square images
     const avgScale = scaleFactor;
-    return area * avgScale * avgScale;
+    return normalizedArea * avgScale * avgScale;
 }
 
 /**

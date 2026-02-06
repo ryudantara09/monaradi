@@ -101,7 +101,15 @@ function handleMouseMove(e: MouseEvent) {
     if (parcel) {
       const newGeometry = [...parcel.geometry];
       newGeometry[draggingVertexIndex.value] = pos;
-      parcelsStore.updateParcel(parcel.id, { geometry: newGeometry }, calibrationStore.scaleFactor);
+      parcelsStore.updateParcel(
+        parcel.id, 
+        { geometry: newGeometry }, 
+        calibrationStore.scaleFactor,
+        {
+          width: calibrationStore.imageWidth,
+          height: calibrationStore.imageHeight
+        }
+      );
     }
     e.preventDefault();
     e.stopPropagation();

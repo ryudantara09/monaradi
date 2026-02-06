@@ -4,6 +4,11 @@ import type { Parcel } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { calculatePolygonArea } from '@/utils/geometry';
 
+export interface ImageDimensions {
+    width: number;
+    height: number;
+}
+
 export const useParcelsStore = defineStore('parcels', () => {
     const parcels = ref<Parcel[]>([]);
     const selectedParcelId = ref<string | null>(null);
@@ -20,9 +25,12 @@ export const useParcelsStore = defineStore('parcels', () => {
     function createParcel(
         geometry: [number, number][],
         scaleFactor: number | null,
-        label?: string
+        label?: string,
+        imageDimensions?: ImageDimensions
     ): Parcel {
-        const areaSqm = scaleFactor ? calculatePolygonArea(geometry, scaleFactor) : 0;
+        const areaSqm = scaleFactor
+            ? calculatePolygonArea(geometry, scaleFactor, imageDimensions)
+            : 0;
         const parcel: Parcel = {
             id: uuidv4(),
             geometry,
@@ -41,7 +49,8 @@ export const useParcelsStore = defineStore('parcels', () => {
     function updateParcel(
         id: string,
         updates: Partial<Omit<Parcel, 'id' | 'totalPrice'>>,
-        scaleFactor?: number | null
+        scaleFactor?: number | null,
+        imageDimensions?: ImageDimensions
     ) {
         const index = parcels.value.findIndex((p: Parcel) => p.id === id);
         if (index !== -1) {
@@ -50,7 +59,7 @@ export const useParcelsStore = defineStore('parcels', () => {
             // If geometry is being updated and we have a scale factor, recalculate area
             let newAreaSqm = updates.areaSqm ?? parcel.areaSqm;
             if (updates.geometry && scaleFactor) {
-                newAreaSqm = calculatePolygonArea(updates.geometry, scaleFactor);
+                newAreaSqm = calculatePolygonArea(updates.geometry, scaleFactor, imageDimensions);
             }
 
             const updated: Parcel = {
@@ -63,10 +72,10 @@ export const useParcelsStore = defineStore('parcels', () => {
         }
     }
 
-    function recalculateAllAreas(scaleFactor: number) {
+    function recalculateAllAreas(scaleFactor: number, imageDimensions?: ImageDimensions) {
         for (let i = 0; i < parcels.value.length; i++) {
             const parcel = parcels.value[i]!;
-            const newAreaSqm = calculatePolygonArea(parcel.geometry, scaleFactor);
+            const newAreaSqm = calculatePolygonArea(parcel.geometry, scaleFactor, imageDimensions);
             parcels.value[i] = {
                 ...parcel,
                 areaSqm: newAreaSqm,
