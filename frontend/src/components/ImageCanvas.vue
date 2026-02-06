@@ -191,11 +191,53 @@ function onImageLoad() {
   updateDimensions();
 }
 
+const imgStyle = ref({
+  top: '0px',
+  left: '0px',
+  width: '100%',
+  height: '100%'
+});
+
 function updateDimensions() {
-  if (containerRef.value) {
-    containerWidth.value = containerRef.value.clientWidth;
-    containerHeight.value = containerRef.value.clientHeight;
+  if (!containerRef.value || !imageRef.value) {
+    console.warn('[ImageCanvas] Refs not ready for dimension update');
+    return;
   }
+
+  const cw = containerRef.value.clientWidth;
+  const ch = containerRef.value.clientHeight;
+  const nw = imageRef.value.naturalWidth;
+  const nh = imageRef.value.naturalHeight;
+  
+  // Log dimensions for debugging
+  console.log('[ImageCanvas] Update dimensions:', { cw, ch, nw, nh });
+
+  if (cw === 0 || ch === 0 || nw === 0 || nh === 0) {
+    console.warn('[ImageCanvas] Zero dimensions detected, retrying...');
+    // Retry shortly if dimensions are missing (e.g. image not fully loaded/rendered)
+    setTimeout(updateDimensions, 100);
+    return;
+  }
+  
+  containerWidth.value = cw;
+  containerHeight.value = ch;
+  
+  // Calculate rendered image dimensions (simulating object-fit: contain)
+  // Since we force w-full h-full on the img, object-fit scales it to fit the container
+  const scale = Math.min(cw / nw, ch / nh);
+  const rw = nw * scale;
+  const rh = nh * scale;
+  const top = (ch - rh) / 2;
+  const left = (cw - rw) / 2;
+  
+  console.log('[ImageCanvas] Calculated style:', { scale, rw, rh, top, left });
+  
+  imgStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${rw}px`,
+    height: `${rh}px`
+  };
 }
 
 // Watch for mode changes to reset state
@@ -210,16 +252,29 @@ watch(() => props.mode, (newMode) => {
 });
 
 onMounted(() => {
-  updateDimensions();
-  window.addEventListener('resize', updateDimensions);
+  console.log('[ImageCanvas] Mounted');
+  // Use ResizeObserver for more robust dimension tracking
+  const resizeObserver = new ResizeObserver(() => {
+    updateDimensions();
+  });
+  
+  if (containerRef.value) {
+    resizeObserver.observe(containerRef.value);
+  }
+  
+  // Force update after a small delay to ensure rendering is complete
+  setTimeout(updateDimensions, 50);
+  setTimeout(updateDimensions, 500);
+  
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('mouseup', handleMouseUp);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateDimensions);
-  window.removeEventListener('keydown', handleKeydown);
-  window.removeEventListener('mouseup', handleMouseUp);
+  
+  // Cleanup
+  onUnmounted(() => {
+    resizeObserver.disconnect();
+    window.removeEventListener('keydown', handleKeydown);
+    window.removeEventListener('mouseup', handleMouseUp);
+  });
 });
 
 // Live calibration line that follows cursor
@@ -254,7 +309,7 @@ const showCloseIndicator = computed(() => {
 <template>
   <div
     ref="containerRef"
-    class="relative w-full h-full bg-slate-900 rounded-lg overflow-hidden"
+    class="relative w-full h-full bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center"
   >
     <!-- Land Image -->
     <img
@@ -269,7 +324,8 @@ const showCloseIndicator = computed(() => {
     <svg
       v-if="imageLoaded"
       ref="svgRef"
-      class="absolute inset-0 w-full h-full"
+      class="absolute"
+      :style="imgStyle"
       :class="{ 'cursor-crosshair': mode !== 'view', 'cursor-move': isDragging }"
       viewBox="0 0 1 1"
       preserveAspectRatio="none"

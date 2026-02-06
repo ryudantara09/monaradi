@@ -72,7 +72,7 @@ router.post('/', async (req, res) => {
         }
 
         console.log('\n========== GOOGLE GEMINI API REQUEST ==========');
-        console.log('[Gemini] Sending request to gemini-2.0-flash');
+        console.log('[Gemini] Sending request to gemini-2.5-flash');
         console.log('[Gemini] Image data length:', imageBase64.length);
 
         // Extract the base64 data and mime type from the data URL
@@ -90,42 +90,32 @@ router.post('/', async (req, res) => {
         // Initialize the Google GenAI client
         const ai = new GoogleGenAI({ apiKey });
 
-        // Improved prompt with step-by-step analysis and example
-        const prompt = `You are a computer vision expert specializing in geometric shape detection and cadastral mapping.
+        const prompt = `You are a cadastral mapping expert. Your goal is to extract the topology of the land parcels in this image.
 
-## TASK
-Analyze this image and extract the coordinates of ALL distinct land parcels/lots. The image may be:
-- A cadastral/survey map with boundary lines
-- A satellite image with visible property boundaries  
-- A hand-drawn map of land divisions
+## TOPOLOGY STRATEGY
+Instead of tracing separate polygons, you must:
+1. Identify all unique **Vertices** (corners/intersections) in the entire image.
+2. Define each **Parcel** as a sequence of vertex indices.
 
-## ANALYSIS STEPS
-1. First, identify the overall bounding region of the parcels in the image
-2. Count how many distinct enclosed regions (parcels) exist
-3. For each parcel, identify all corner/vertex points
-4. Trace each parcel boundary clockwise, starting from the top-left corner of that parcel
-5. Convert each vertex to normalized coordinates where (0,0)=top-left and (1,1)=bottom-right
-
-## COORDINATE SYSTEM
-- X increases from left (0.0) to right (1.0)
-- Y increases from top (0.0) to bottom (1.0)
-- Be precise - estimate coordinates to 2 decimal places
-- Vertices on the image edges should be close to 0.0 or 1.0
-- Central vertices should be around 0.4-0.6
+## REQUIREMENTS
+- **Vertices**: A list of [x, y] coordinates for every corner. (0,0 is top-left, 1,1 is bottom-right).
+- **Parcels**: A list of lists, where each inner list contains the INDICES of the vertices that form the parcel (0-indexed).
+- **Precision**: Use the visible grid dots to align your vertices.
+- **Completeness**: Every lot must be defined.
 
 ## EXAMPLE
-For an image with 2 triangular parcels side by side:
-{"polygons": [[[0.1, 0.2], [0.3, 0.2], [0.2, 0.6]], [[0.3, 0.2], [0.5, 0.2], [0.4, 0.6]]], "confidence": 0.9}
+Vertices: [[0.1, 0.1], [0.5, 0.1], [0.5, 0.5], [0.1, 0.5]]
+Parcels:
+- [[0, 1, 2, 3]] (Left Box)
+- ...
 
 ## OUTPUT FORMAT
-Return ONLY valid JSON, no markdown, no explanation:
-{"polygons": [[[x,y], [x,y], ...], ...], "confidence": <0.0-1.0>}
-
-## IMPORTANT
-- Each polygon MUST be a closed shape (at least 3 vertices)
-- Include ALL parcels visible in the image
-- Shared edges between adjacent parcels should have matching coordinates
-- If parcels share a vertex, that vertex should have the same coordinates in both polygons`;
+Return valid JSON only:
+{
+  "vertices": [[x,y], [x,y], ...],
+  "parcels": [[idx1, idx2, idx3, ...], [idx1, ...], ...],
+  "confidence": 0.95
+}`;
 
         // Create the content with image and text
         const contents = [
@@ -138,13 +128,13 @@ Return ONLY valid JSON, no markdown, no explanation:
             { text: prompt }
         ];
 
-        // Call the Gemini API using the SDK with better settings
+        // Call the Gemini API using the SDK
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash', // More capable model for vision tasks
+            model: 'gemini-3-flash-preview', // More capable model for vision tasks
             contents: contents,
             config: {
-                temperature: 0.1, // Low temperature for consistent, precise output
-                maxOutputTokens: 8192, // Allow longer output for complex images
+                // temperature: 0.1, // Low temperature for precise indices
+                maxOutputTokens: 8192,
             }
         });
 
@@ -165,27 +155,40 @@ Return ONLY valid JSON, no markdown, no explanation:
         // Parse the JSON response
         try {
             const jsonStr = extractJSON(content);
-            console.log('\n[JSON Parsing] Attempting to parse:', jsonStr.substring(0, 200) + '...');
-
+            console.log('\n[JSON Parsing] Attempting to parse:', jsonStr.substring(0, Math.min(jsonStr.length, 200)) + (jsonStr.length > 200 ? '...' : ''));
             const result = JSON.parse(jsonStr);
 
-            console.log('[JSON Parsing] Successfully parsed!');
-            console.log('[JSON Parsing] Found', result.polygons?.length || 0, 'polygons');
-            console.log('[JSON Parsing] Confidence:', result.confidence);
+            let polygons: number[][][] = [];
 
-            // Validate the response structure
-            if (!result.polygons || !Array.isArray(result.polygons)) {
-                console.warn('[JSON Parsing] Warning: Missing or invalid polygons array, returning empty');
-                return res.json({ polygons: [], confidence: 0 });
+            // Handle the new "Topology" format (vertices + indices)
+            if (result.vertices && result.parcels) {
+                console.log('[JSON Parsing] Detected Topology format');
+                const vertices = result.vertices as [number, number][];
+                const parcelIndices = result.parcels as number[][];
+
+                polygons = parcelIndices.map(indices => {
+                    return indices.map(idx => {
+                        const v = vertices[idx];
+                        if (!v) throw new Error(`Invalid vertex index: ${idx}`);
+                        return v;
+                    });
+                });
+            }
+            // Fallback to legacy "Polygons" format
+            else if (result.polygons) {
+                console.log('[JSON Parsing] Detected Legacy Polygon format');
+                polygons = result.polygons;
             }
 
+            console.log('[JSON Parsing] Successfully reconstructed', polygons.length, 'polygons');
+
             // Validate and filter polygons
-            const validPolygons = result.polygons.filter((polygon: any) => {
+            const validPolygons = polygons.filter((polygon: any) => {
                 if (!Array.isArray(polygon) || polygon.length < 3) {
                     console.warn('[JSON Parsing] Skipping invalid polygon (less than 3 points)');
                     return false;
                 }
-                // Check that all points are valid [x, y] pairs with values between 0 and 1
+                // Check coordinates
                 for (const point of polygon) {
                     if (!Array.isArray(point) || point.length < 2) {
                         console.warn('[JSON Parsing] Skipping polygon with invalid point format');
