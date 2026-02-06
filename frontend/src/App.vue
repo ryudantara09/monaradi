@@ -118,10 +118,8 @@ async function detectBoundaries() {
 }
 
 function clearAll() {
-  if (confirm('Clear all parcels and start over?')) {
+  if (confirm('Clear all parcels?')) {
     parcelsStore.clearParcels();
-    calibrationStore.clearCalibration();
-    imageDataUrl.value = null;
   }
 }
 

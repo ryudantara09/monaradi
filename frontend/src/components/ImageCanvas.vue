@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useParcelsStore } from '@/stores/parcels';
 import { useCalibrationStore } from '@/stores/calibration';
-import { isPointInPolygon, findClosestVertex, calculateDistance } from '@/utils/geometry';
+import { isPointInPolygon, findClosestVertex, calculateDistance, findClosestEdge } from '@/utils/geometry';
 import ParcelPolygon from './ParcelPolygon.vue';
 import type { Parcel } from '@/types';
 
@@ -33,12 +33,14 @@ const calibrationEnd = ref<[number, number] | null>(null);
 
 // Drawing state
 const drawingPoints = ref<[number, number][]>([]);
+const hoveredEdge = ref<{ index: number; point: [number, number] } | null>(null);
 
 // Mouse tracking state
 const currentMousePos = ref<[number, number] | null>(null);
 
 // Dragging state for vertex editing
 const isDragging = ref(false);
+const justFinishedDragging = ref(false);
 const draggingParcelId = ref<string | null>(null);
 const draggingVertexIndex = ref<number | null>(null);
 
@@ -84,6 +86,13 @@ function handleMouseUp(e: MouseEvent) {
     isDragging.value = false;
     draggingParcelId.value = null;
     draggingVertexIndex.value = null;
+    
+    // Prevent immediate click processing (fixes dragging causing deselection)
+    justFinishedDragging.value = true;
+    setTimeout(() => {
+      justFinishedDragging.value = false;
+    }, 50);
+
     e.preventDefault();
     e.stopPropagation();
   }
@@ -113,12 +122,25 @@ function handleMouseMove(e: MouseEvent) {
     }
     e.preventDefault();
     e.stopPropagation();
+    return;
+  }
+
+  // Handle edge detection for inserting points
+  if (props.mode === 'view' && parcelsStore.selectedParcel && !isDragging.value) {
+    const edge = findClosestEdge(pos, parcelsStore.selectedParcel.geometry, 0.015);
+    if (edge) {
+      hoveredEdge.value = { index: edge.index, point: edge.point };
+    } else {
+      hoveredEdge.value = null;
+    }
+  } else {
+    hoveredEdge.value = null;
   }
 }
 
 function handleClick(e: MouseEvent) {
   // Don't process click if we just finished dragging
-  if (isDragging.value) return;
+  if (isDragging.value || justFinishedDragging.value) return;
 
   const pos = getMousePosition(e);
   if (!pos) return;
@@ -142,6 +164,24 @@ function handleClick(e: MouseEvent) {
       drawingPoints.value.push(pos);
     }
   } else if (props.mode === 'view') {
+    // Check if clicking on an edge to insert point
+    if (hoveredEdge.value && parcelsStore.selectedParcel) {
+      const newGeometry = [...parcelsStore.selectedParcel.geometry];
+      // Insert after index (at index + 1)
+      newGeometry.splice(hoveredEdge.value.index + 1, 0, hoveredEdge.value.point);
+      
+      parcelsStore.updateParcel(
+        parcelsStore.selectedParcel.id,
+        { geometry: newGeometry },
+        calibrationStore.scaleFactor,
+        { width: calibrationStore.imageWidth, height: calibrationStore.imageHeight }
+      );
+      
+      // Clear hovered edge preventing immediate re-click issues
+      hoveredEdge.value = null;
+      return; 
+    }
+
     // Check if clicked on a parcel
     let clickedParcel: Parcel | null = null;
     for (const parcel of parcelsStore.parcels) {
@@ -155,6 +195,31 @@ function handleClick(e: MouseEvent) {
       parcelsStore.selectParcel(clickedParcel.id);
     } else {
       parcelsStore.selectParcel(null);
+    }
+  }
+}
+
+function handleRightClick(e: MouseEvent) {
+  if (props.mode === 'draw') {
+    // Remove last point
+    drawingPoints.value.pop();
+  } else if (props.mode === 'view' && parcelsStore.selectedParcel) {
+    const pos = getMousePosition(e);
+    if (!pos) return;
+    
+    // Check if clicking on a vertex to remove it
+    const vertexIndex = findClosestVertex(pos, parcelsStore.selectedParcel.geometry, 0.025);
+    
+    if (vertexIndex !== null && parcelsStore.selectedParcel.geometry.length > 3) {
+      const newGeometry = [...parcelsStore.selectedParcel.geometry];
+      newGeometry.splice(vertexIndex, 1);
+      
+      parcelsStore.updateParcel(
+        parcelsStore.selectedParcel.id,
+        { geometry: newGeometry },
+        calibrationStore.scaleFactor,
+        { width: calibrationStore.imageWidth, height: calibrationStore.imageHeight }
+      );
     }
   }
 }
@@ -333,6 +398,7 @@ const showCloseIndicator = computed(() => {
       @dblclick="handleDoubleClick"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
+      @contextmenu.prevent="handleRightClick"
     >
       <!-- Existing parcels -->
       <ParcelPolygon
@@ -340,7 +406,21 @@ const showCloseIndicator = computed(() => {
         :key="parcel.id"
         :parcel="parcel"
         :is-selected="parcelsStore.selectedParcelId === parcel.id"
+        class="transition-opacity"
+        :class="{ 'pointer-events-none': mode === 'draw' }"
         @select="parcelsStore.selectParcel"
+      />
+
+      <!-- Edge insertion preview -->
+      <circle
+        v-if="hoveredEdge && mode === 'view'"
+        :cx="hoveredEdge.point[0]"
+        :cy="hoveredEdge.point[1]"
+        r="0.012"
+        fill="white"
+        stroke="#3b82f6"
+        stroke-width="0.003"
+        class="cursor-pointer opacity-80 hover:opacity-100"
       />
 
       <!-- Calibration line with live preview -->
@@ -439,7 +519,7 @@ const showCloseIndicator = computed(() => {
         {{ !calibrationStart ? '📍 Click to set start point' : '📍 Click to set end point' }}
       </template>
       <template v-else-if="mode === 'draw'">
-        {{ showCloseIndicator ? '✓ Click to close polygon' : (drawingPoints.length >= 3 ? 'Click near first point to close, or press Enter' : 'Click to add points (min 3 required)') }}
+        {{ showCloseIndicator ? '✓ Click to close polygon' : (drawingPoints.length >= 3 ? 'Right-click to undo • Click near first point to close' : 'Right-click to undo • Click to add points') }}
       </template>
     </div>
   </div>

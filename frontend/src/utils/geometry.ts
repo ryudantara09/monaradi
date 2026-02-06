@@ -158,5 +158,52 @@ export function findClosestVertex(
         }
     }
 
+
     return closestIndex;
+}
+
+/**
+ * Find the closest point on the polygon edges to a given point
+ * Returns insertion index (after which vertex the new point should be added) and the point coordinates
+ */
+export function findClosestEdge(
+    point: [number, number],
+    polygon: [number, number][],
+    threshold: number = 0.02
+): { index: number; point: [number, number]; distance: number } | null {
+    let closestEdge: { index: number; point: [number, number]; distance: number } | null = null;
+    let minDistance = threshold;
+
+    for (let i = 0; i < polygon.length; i++) {
+        const p1 = polygon[i]!;
+        const p2 = polygon[(i + 1) % polygon.length]!; // Wrap around to first point
+
+        // Project point onto line segment p1-p2
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        const l2 = dx * dx + dy * dy;
+
+        if (l2 === 0) continue; // p1 and p2 are the same
+
+        let t = ((point[0] - p1[0]) * dx + (point[1] - p1[1]) * dy) / l2;
+        t = Math.max(0, Math.min(1, t)); // Clamp to segment
+
+        const projection: [number, number] = [
+            p1[0] + t * dx,
+            p1[1] + t * dy
+        ];
+
+        const dist = calculateDistance(point, projection);
+
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestEdge = {
+                index: i, // Insert after index i (between i and i+1)
+                point: projection,
+                distance: dist
+            };
+        }
+    }
+
+    return closestEdge;
 }

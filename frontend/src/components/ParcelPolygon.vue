@@ -30,9 +30,12 @@ const pathData = computed(() => {
 
 const colors = computed(() => statusColors[props.parcel.status] || statusColors.AVAILABLE);
 
+
 function handleClick(e: MouseEvent) {
-  e.stopPropagation();
-  emit('select', props.parcel.id);
+  if (!props.isSelected) {
+    e.stopPropagation();
+    emit('select', props.parcel.id);
+  }
 }
 </script>
 
