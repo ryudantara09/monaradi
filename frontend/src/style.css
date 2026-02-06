@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Custom theme colors for parcel statuses */
+@theme {
+  --color-available: #22c55e;
+  --color-sold: #ef4444;
+  --color-reserved: #eab308;
+  --color-primary: #3b82f6;
+  --color-surface: #1e293b;
+  --color-surface-light: #334155;
+}
+
+/* Base styles */
+body {
+  @apply bg-slate-900 text-slate-100 antialiased;
+  margin: 0;
+  min-height: 100vh;
+}
+
+#app {
+  @apply min-h-screen;
+}

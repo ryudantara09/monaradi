@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Parcel {
+  id            String   @id @default(uuid())
+  geometry      String   // JSON stringified [[x,y], ...]
+  label         String
+  ownerName     String?
+  status        String   @default("AVAILABLE")
+  paymentStatus String   @default("UNPAID")
+  areaSqm       Float
+  pricePerSqm   Float
+  totalPrice    Float
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String   @default("Untitled Project")
+  imagePath   String
+  scaleFactor Float?
+  refLineData String?  // JSON for reference line
+  parcels     Parcel[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
