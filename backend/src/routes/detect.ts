@@ -73,17 +73,14 @@ router.post('/', async (req, res) => {
 ## TOPOLOGY STRATEGY
 Instead of tracing separate polygons, you must:
 1. Identify all unique **Vertices** (corners/intersections) in the entire image.
-2. Define each **Parcel** as a sequence of vertex indices.
+2. Define each **Parcel** as a sequence of vertex indices. 
+3. The end goal is to create a list masks for the lands/parcels.
 
 ## REQUIREMENTS
 - **Vertices**: A list of [x, y] coordinates for every corner. (0,0 is top-left, 1,1 is bottom-right).
 - **Parcels**: A list of lists, where each inner list contains the INDICES of the vertices that form the parcel (0-indexed).
 - **Precision**: Use the visible grid dots to align your vertices.
-- **Completeness**: Every lot must be defined.
-
-## EXAMPLE
-Vertices: [[0.1, 0.1], [0.5, 0.1], [0.5, 0.5], [0.1, 0.5]]
-Parcels:
+pParcels:
 - [[0, 1, 2, 3]] (Left Box)
 - ...
 
