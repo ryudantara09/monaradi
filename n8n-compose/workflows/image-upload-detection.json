@@ -1,0 +1,206 @@
+{
+  "name": "Monaradi - Image Upload & Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "monaradi/upload-image",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-receive-image",
+      "name": "Receive Image Upload",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.MONARADI_API_URL}}/n8n/webhook/image-upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Workflow-ID",
+              "value": "={{$workflow.id}}"
+            },
+            {
+              "name": "X-N8N-Workflow-Name",
+              "value": "={{$workflow.name}}"
+            },
+            {
+              "name": "X-N8N-Execution-ID",
+              "value": "={{$execution.id}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "imageBase64",
+              "value": "={{$json.body.imageBase64}}"
+            },
+            {
+              "name": "projectName",
+              "value": "={{$json.body.projectName || 'N8N Upload'}}"
+            },
+            {
+              "name": "webhookUrl",
+              "value": "={{$env.WEBHOOK_URL}}/webhook/monaradi/detection-callback"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-queue-image",
+      "name": "Queue Image for Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.success}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.MONARADI_API_URL}}/n8n/trigger/detect",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "imageBase64",
+              "value": "={{$('Receive Image Upload').item.json.body.imageBase64}}"
+            },
+            {
+              "name": "projectId",
+              "value": "={{$json.data.projectId}}"
+            },
+            {
+              "name": "callbackUrl",
+              "value": "={{$env.WEBHOOK_URL}}/webhook/monaradi/detection-complete"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "http-trigger-detection",
+      "name": "Trigger AI Detection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Image queued for AI detection', data: $json.data } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Processing failed' } }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "Receive Image Upload": {
+      "main": [
+        [
+          {
+            "node": "Queue Image for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Image for Processing": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Trigger AI Detection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger AI Detection": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["monaradi", "land-parcel", "ai-detection"]
+}

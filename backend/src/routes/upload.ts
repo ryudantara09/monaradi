@@ -31,7 +31,7 @@ const upload = multer({
 });
 
 // POST /api/upload - Upload land image
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', upload.single('name'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });

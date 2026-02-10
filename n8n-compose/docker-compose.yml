@@ -1,22 +1,68 @@
 services:
+  # PostgreSQL database for n8n
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-n8n_password}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monaradi-network
+
+  # n8n workflow automation
   n8n:
     image: docker.n8n.io/n8nio/n8n
     restart: always
     ports:
-      - "5678:5678"
+      - "${N8N_PORT:-5678}:5678"
     environment:
-      - N8N_HOST=localhost
+      # Database configuration
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-n8n_password}
+      
+      # n8n configuration
+      - N8N_HOST=${N8N_HOST:-localhost}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - NODE_ENV=production
-      - WEBHOOK_URL=http://localhost:5678/
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
-      - TZ=${GENERIC_TIMEZONE}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=${NODE_ENV:-production}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Europe/Paris}
+      - TZ=${GENERIC_TIMEZONE:-Europe/Paris}
+      
+      # Security (optional, set in .env for production)
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-}
+      
+      # External service connections (for webhook callbacks)
+      - MONARADI_API_URL=${MONARADI_API_URL:-http://host.docker.internal:3000/api}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - monaradi-network
 
 volumes:
+  postgres_data:
   n8n_data:
+
+networks:
+  monaradi-network:
+    driver: bridge

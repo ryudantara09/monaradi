@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "lib": [
+            "ES2020"
+        ],
+        "skipLibCheck": true,
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": false,
+        "isolatedModules": true,
+        "moduleDetection": "force",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "esModuleInterop": true,
+        "outDir": "dist-electron",
+        "rootDir": "src/electron"
+    },
+    "include": [
+        "src/electron/**/*"
+    ]
+}

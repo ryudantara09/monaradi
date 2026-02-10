@@ -1,0 +1,173 @@
+{
+  "name": "Monaradi - Document Management",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "monaradi/upload-document",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-receive-doc",
+      "name": "Receive Document",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.MONARADI_API_URL}}/n8n/webhook/save-document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{$json.body.name}}"
+            },
+            {
+              "name": "fileBase64",
+              "value": "={{$json.body.fileBase64}}"
+            },
+            {
+              "name": "mimeType",
+              "value": "={{$json.body.mimeType}}"
+            },
+            {
+              "name": "type",
+              "value": "={{$json.body.type || 'other'}}"
+            },
+            {
+              "name": "terrainId",
+              "value": "={{$json.body.terrainId}}"
+            },
+            {
+              "name": "customerId",
+              "value": "={{$json.body.customerId}}"
+            },
+            {
+              "name": "contractId",
+              "value": "={{$json.body.contractId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-save-document",
+      "name": "Save Document to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.success}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-doc-saved",
+      "name": "Check Saved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Document saved successfully', documentId: $json.data.documentId } }}",
+        "options": {}
+      },
+      "id": "respond-doc-success",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'Failed to save document' } }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-doc-error",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 400]
+    }
+  ],
+  "connections": {
+    "Receive Document": {
+      "main": [
+        [
+          {
+            "node": "Save Document to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Document to DB": {
+      "main": [
+        [
+          {
+            "node": "Check Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Saved": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["monaradi", "documents", "storage"]
+}
