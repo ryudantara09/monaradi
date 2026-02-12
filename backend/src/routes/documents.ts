@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
                 terrains: { include: { terrain: true } },
                 customers: { include: { customer: true } },
                 contracts: { include: { contract: true } },
-                transactions: { include: { transaction: true } },
+                parcels: { include: { parcel: true } },
             },
         });
 
@@ -72,7 +72,7 @@ router.get('/:id', async (req, res) => {
                 terrains: { include: { terrain: true } },
                 customers: { include: { customer: true } },
                 contracts: { include: { contract: true } },
-                transactions: { include: { transaction: true } },
+                parcels: { include: { parcel: true } },
             },
         });
 
@@ -124,7 +124,7 @@ router.get('/:id/download', async (req, res) => {
 router.post('/', upload.single('file'), async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
-        const { name, type, terrainId, customerId, contractId, transactionId, storeInDb } = req.body;
+        const { name, type, terrainId, customerId, contractId, parcelId, storeInDb } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -140,12 +140,12 @@ router.post('/', upload.single('file'), async (req, res) => {
             data: {
                 name: name || req.file.originalname,
                 filePath: req.file.path,
-                fileData: fileData,
+                fileData: fileData as any,
                 mimeType: req.file.mimetype,
                 type: type || 'other',
                 sizeBytes: req.file.size,
                 uploadedAt: new Date(),
-                isLinked: !!(terrainId || customerId || contractId || transactionId),
+                isLinked: !!(terrainId || customerId || contractId || parcelId),
             },
         });
 
@@ -165,9 +165,9 @@ router.post('/', upload.single('file'), async (req, res) => {
                 data: { contractId, documentId: document.id },
             });
         }
-        if (transactionId) {
-            await prisma.transactionDocument.create({
-                data: { transactionId, documentId: document.id },
+        if (parcelId) {
+            await prisma.parcelDocument.create({
+                data: { parcelId, documentId: document.id },
             });
         }
 
@@ -242,9 +242,9 @@ router.post('/:id/link', async (req, res) => {
                     data: { contractId: entityId, documentId: id },
                 });
                 break;
-            case 'transaction':
-                await prisma.transactionDocument.create({
-                    data: { transactionId: entityId, documentId: id },
+            case 'parcel':
+                await prisma.parcelDocument.create({
+                    data: { parcelId: entityId, documentId: id },
                 });
                 break;
             default:
@@ -286,9 +286,9 @@ router.delete('/:id/link', async (req, res) => {
                     where: { contractId_documentId: { contractId: entityId, documentId: id } },
                 });
                 break;
-            case 'transaction':
-                await prisma.transactionDocument.delete({
-                    where: { transactionId_documentId: { transactionId: entityId, documentId: id } },
+            case 'parcel':
+                await prisma.parcelDocument.delete({
+                    where: { parcelId_documentId: { parcelId: entityId, documentId: id } },
                 });
                 break;
             default:
@@ -302,7 +302,7 @@ router.delete('/:id/link', async (req, res) => {
                 terrains: true,
                 customers: true,
                 contracts: true,
-                transactions: true,
+                parcels: true,
             },
         });
 
@@ -311,7 +311,7 @@ router.delete('/:id/link', async (req, res) => {
                 document.terrains.length > 0 ||
                 document.customers.length > 0 ||
                 document.contracts.length > 0 ||
-                document.transactions.length > 0;
+                document.parcels.length > 0;
 
             await prisma.document.update({
                 where: { id },

@@ -21,10 +21,10 @@ router.post('/webhook/image-upload', async (req, res) => {
             metadata
         } = req.body;
 
-        // Create or get project
-        let project = null;
+        // Create or get terrain (formerly project)
+        let terrain = null;
         if (projectName) {
-            project = await prisma.project.create({
+            terrain = await prisma.terrain.create({
                 data: {
                     name: projectName || 'N8N Upload',
                     imagePath: imagePath || '/uploads/n8n-upload',
@@ -36,7 +36,7 @@ router.post('/webhook/image-upload', async (req, res) => {
         // Queue the image for AI processing
         const queueItem = await prisma.imageProcessingQueue.create({
             data: {
-                projectId: project?.id,
+                terrainId: terrain?.id,
                 imageData: imageBase64 || imagePath,
                 status: 'pending',
                 webhookUrl: webhookUrl,
@@ -51,7 +51,7 @@ router.post('/webhook/image-upload', async (req, res) => {
                 executionId: req.headers['x-n8n-execution-id'] as string,
                 status: 'success',
                 inputData: JSON.stringify({ projectName, hasImage: !!imageBase64 }),
-                outputData: JSON.stringify({ queueItemId: queueItem.id, projectId: project?.id }),
+                outputData: JSON.stringify({ queueItemId: queueItem.id, terrainId: terrain?.id }),
             },
         });
 
@@ -60,7 +60,7 @@ router.post('/webhook/image-upload', async (req, res) => {
             message: 'Image queued for processing',
             data: {
                 queueItemId: queueItem.id,
-                projectId: project?.id,
+                terrainId: terrain?.id,
                 status: 'pending',
             },
         });
@@ -81,7 +81,7 @@ router.post('/webhook/process-detection', async (req, res) => {
         const prisma: PrismaClient = req.app.locals.prisma;
         const {
             queueItemId,
-            projectId,
+            terrainId,
             polygons,
             confidence,
             vertices,
@@ -112,11 +112,11 @@ router.post('/webhook/process-detection', async (req, res) => {
                             geometry: JSON.stringify(polygon),
                             label: `Parcel ${i + 1}`,
                             status: 'AVAILABLE',
-                            paymentStatus: 'UNPAID',
+
                             areaSqm: 0,
                             pricePerSqm: 0,
                             totalPrice: 0,
-                            projectId: projectId,
+                            terrainId: terrainId,
                         },
                     });
                     createdParcels.push(parcel);
@@ -136,11 +136,11 @@ router.post('/webhook/process-detection', async (req, res) => {
                             geometry: JSON.stringify(polygon),
                             label: `Parcel ${createdParcels.length + 1}`,
                             status: 'AVAILABLE',
-                            paymentStatus: 'UNPAID',
+
                             areaSqm: 0,
                             pricePerSqm: 0,
                             totalPrice: 0,
-                            projectId: projectId,
+                            terrainId: terrainId,
                         },
                     });
                     createdParcels.push(parcel);
@@ -180,7 +180,6 @@ router.post('/webhook/save-document', async (req, res) => {
             terrainId,
             customerId,
             contractId,
-            transactionId,
             googleDriveId,
         } = req.body;
 
@@ -195,7 +194,7 @@ router.post('/webhook/save-document', async (req, res) => {
                 sizeBytes: fileBase64 ? Buffer.from(fileBase64, 'base64').length : undefined,
                 googleDriveId: googleDriveId,
                 uploadedAt: new Date(),
-                isLinked: !!(terrainId || customerId || contractId || transactionId),
+                isLinked: !!(terrainId || customerId || contractId),
             },
         });
 
@@ -213,11 +212,6 @@ router.post('/webhook/save-document', async (req, res) => {
         if (contractId) {
             await prisma.contractDocument.create({
                 data: { contractId, documentId: document.id },
-            });
-        }
-        if (transactionId) {
-            await prisma.transactionDocument.create({
-                data: { transactionId, documentId: document.id },
             });
         }
 
@@ -324,7 +318,7 @@ router.get('/workflow-logs', async (req, res) => {
 router.post('/trigger/detect', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
-        const { imageBase64, projectId, callbackUrl } = req.body;
+        const { imageBase64, terrainId, callbackUrl } = req.body;
 
         if (!imageBase64) {
             return res.status(400).json({
@@ -336,7 +330,7 @@ router.post('/trigger/detect', async (req, res) => {
         // Queue for processing
         const queueItem = await prisma.imageProcessingQueue.create({
             data: {
-                projectId,
+                terrainId,
                 imageData: imageBase64,
                 status: 'processing',
                 webhookUrl: callbackUrl,
@@ -443,7 +437,7 @@ Return valid JSON only:
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         queueItemId: queueItem.id,
-                        projectId,
+                        terrainId,
                         polygons,
                         confidence: result.confidence,
                     }),

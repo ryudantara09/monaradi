@@ -9,6 +9,10 @@ router.get('/', async (req, res) => {
         const prisma: PrismaClient = req.app.locals.prisma;
         const parcels = await prisma.parcel.findMany({
             orderBy: { createdAt: 'desc' },
+            include: {
+                customer: true,
+                terrain: true,
+            },
         });
 
         // Parse geometry JSON for each parcel
@@ -28,23 +32,31 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
-        const { geometry, label, ownerName, status, paymentStatus, areaSqm, pricePerSqm, projectId } =
+        const { geometry, label, ownerName, status, areaSqm, pricePerSqm, terrainId, customerId } =
             req.body;
 
         // Validate and calculate total price
-        const totalPrice = areaSqm * pricePerSqm;
+        const totalPrice = (areaSqm || 0) * (pricePerSqm || 0);
+
+        // Determine status
+        let finalStatus = status || 'AVAILABLE';
+        if (customerId) finalStatus = 'SOLD';
 
         const parcel = await prisma.parcel.create({
             data: {
                 geometry: JSON.stringify(geometry),
                 label: label || 'Untitled',
                 ownerName: ownerName || null,
-                status: status || 'AVAILABLE',
-                paymentStatus: paymentStatus || 'UNPAID',
+                status: finalStatus,
                 areaSqm: areaSqm || 0,
                 pricePerSqm: pricePerSqm || 0,
                 totalPrice,
-                projectId: projectId || null,
+                terrainId: terrainId || null,
+                customerId: customerId || null,
+            },
+            include: {
+                customer: true,
+                terrain: true,
             },
         });
 
@@ -63,7 +75,7 @@ router.put('/:id', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
         const { id } = req.params;
-        const { geometry, label, ownerName, status, paymentStatus, areaSqm, pricePerSqm } = req.body;
+        const { geometry, label, ownerName, status, areaSqm, pricePerSqm, customerId, terrainId } = req.body;
 
         // Fetch existing parcel
         const existing = await prisma.parcel.findUnique({ where: { id } });
@@ -76,17 +88,29 @@ router.put('/:id', async (req, res) => {
         const finalPricePerSqm = pricePerSqm ?? existing.pricePerSqm;
         const totalPrice = finalAreaSqm * finalPricePerSqm;
 
+        // Determine status if customerId is being changed
+        let finalStatus = status;
+        if (customerId !== undefined) {
+            if (customerId) finalStatus = 'SOLD';
+            else if (customerId === null) finalStatus = 'AVAILABLE';
+        }
+
         const parcel = await prisma.parcel.update({
             where: { id },
             data: {
                 geometry: geometry ? JSON.stringify(geometry) : undefined,
                 label,
                 ownerName,
-                status,
-                paymentStatus,
+                status: finalStatus,
                 areaSqm: finalAreaSqm,
                 pricePerSqm: finalPricePerSqm,
                 totalPrice,
+                customerId: customerId !== undefined ? (customerId || null) : undefined,
+                terrainId: terrainId !== undefined ? (terrainId || null) : undefined,
+            },
+            include: {
+                customer: true,
+                terrain: true,
             },
         });
 

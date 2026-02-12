@@ -61,7 +61,7 @@ function handleSave() {
   });
   
   hasChanges.value = false;
-  saveMessage.value = 'Changes saved!';
+  saveMessage.value = 'Modifications enregistrées !';
   
   // Clear save message after 2 seconds
   setTimeout(() => {
@@ -71,14 +71,14 @@ function handleSave() {
 
 function handleDelete() {
   if (!parcel.value) return;
-  if (confirm('Are you sure you want to delete this parcel?')) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cette parcelle ?')) {
     parcelsStore.deleteParcel(parcel.value.id);
   }
 }
 
 function handleClose() {
   if (hasChanges.value) {
-    if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+    if (!confirm('Vous avez des modifications non enregistrées. Voulez-vous fermer ?')) {
       return;
     }
   }
@@ -86,15 +86,14 @@ function handleClose() {
 }
 
 const statusOptions: { value: ParcelStatus; label: string; color: string }[] = [
-  { value: 'AVAILABLE', label: 'Available', color: 'bg-available' },
-  { value: 'RESERVED', label: 'Reserved', color: 'bg-reserved' },
-  { value: 'SOLD', label: 'Sold', color: 'bg-sold' },
+  { value: 'AVAILABLE', label: 'Disponible', color: 'bg-available' },
+  { value: 'SOLD', label: 'Vendue', color: 'bg-sold' },
 ];
 
 const paymentOptions: { value: PaymentStatus; label: string }[] = [
-  { value: 'UNPAID', label: 'Unpaid' },
-  { value: 'PARTIAL', label: 'Partial' },
-  { value: 'PAID', label: 'Paid' },
+  { value: 'UNPAID', label: 'Non payé' },
+  { value: 'PARTIAL', label: 'Partiel' },
+  { value: 'PAID', label: 'Payé' },
 ];
 </script>
 
@@ -113,7 +112,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
     >
       <!-- Header -->
       <div class="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-slate-100">Parcel Details</h2>
+        <h2 class="text-xl font-semibold text-slate-100">Détails de la Parcelle</h2>
         <button
           class="p-2 hover:bg-slate-700 rounded-lg transition-colors"
           @click="handleClose"
@@ -128,7 +127,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
       <div class="p-4 space-y-6">
         <!-- Label -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Label</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Libellé</label>
           <input
             v-model="form.label"
             type="text"
@@ -139,11 +138,11 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
 
         <!-- Owner Name -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Owner Name</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Nom du propriétaire</label>
           <input
             v-model="form.ownerName"
             type="text"
-            placeholder="Enter owner name"
+            placeholder="Nom du propriétaire"
             class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary"
             @input="markChanged"
           />
@@ -151,7 +150,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
 
         <!-- Status -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Status</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Statut</label>
           <div class="grid grid-cols-3 gap-2">
             <button
               v-for="option in statusOptions"
@@ -169,56 +168,42 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
           </div>
         </div>
 
-        <!-- Payment Status -->
-        <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Payment Status</label>
-          <select
-            v-model="form.paymentStatus"
-            class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
-            @change="markChanged"
-          >
-            <option v-for="option in paymentOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-
         <!-- Divider -->
         <hr class="border-slate-700" />
 
         <!-- Area (Read-only) -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Area</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Surface</label>
           <div class="px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-slate-300">
             {{ parcel.areaSqm.toFixed(2) }} m²
             <span v-if="!calibrationStore.isCalibrated" class="text-amber-400 text-xs ml-2">
-              (Calibrate for accuracy)
+              (Calibrez pour plus de précision)
             </span>
           </div>
         </div>
 
         <!-- Price per sqm -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Price per m²</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Prix par m²</label>
           <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
             <input
               v-model.number="form.pricePerSqm"
               type="number"
               min="0"
               step="0.01"
-              class="w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              class="w-full px-3 pr-14 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
               @input="markChanged"
             />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">TND</span>
           </div>
         </div>
 
-        <!-- Total Price (Auto-calculated) -->
+        <!-- Prix Total -->
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Total Price</label>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Prix Total</label>
           <div class="px-3 py-3 bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/30 rounded-lg">
             <span class="text-2xl font-bold text-primary">
-              ${{ totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              {{ totalPrice.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) }} TND
             </span>
           </div>
         </div>
@@ -251,7 +236,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
           :disabled="!hasChanges"
           @click="handleSave"
         >
-          {{ hasChanges ? '💾 Save Changes' : 'No Changes' }}
+          {{ hasChanges ? '💾 Enregistrer' : 'Pas de modifications' }}
         </button>
         
         <!-- Delete Button -->
@@ -259,7 +244,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
           class="w-full px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg font-medium transition-colors"
           @click="handleDelete"
         >
-          🗑️ Delete Parcel
+          🗑️ Supprimer la Parcelle
         </button>
       </div>
     </div>

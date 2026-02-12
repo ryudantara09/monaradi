@@ -11,14 +11,22 @@ export interface Parcel {
     areaSqm: number;
     pricePerSqm: number;
     totalPrice: number; // Auto-calculated: areaSqm * pricePerSqm
+    projectId?: string;
+    terrainId?: string;
+    customerId?: string;
 }
 
 export interface Project {
     id: string;
+    name: string;
     imagePath: string;
+    imageData?: string;
     imageDataUrl?: string; // For local display
     scaleFactor: number | null; // pixels per meter
     refLineData: RefLineData | null;
+    parcels?: Parcel[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface RefLineData {
@@ -30,4 +38,112 @@ export interface RefLineData {
 export interface DetectionResult {
     polygons: [number, number][][];
     confidence?: number;
+}
+
+// Aradimon Entity Types
+
+export interface Terrain {
+    id: string;
+    name: string;
+    address?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    mapReference?: string | null;
+    areaSize?: number | null;
+    areaUnit: string;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    parcels?: Parcel[];
+    owner?: Customer;
+    documents?: any[]; // Simplified for now, or define Document type
+    contracts?: any[];
+    _count?: {
+        documents: number;
+        contracts: number;
+        transactions: number;
+    };
+}
+
+export interface Document {
+    id: string;
+    name: string;
+    mimeType?: string;
+    type?: string;
+    sizeBytes?: number;
+    filePath?: string;
+    googleDriveId?: string;
+    thumbnailUrl?: string;
+    fileData?: string; // base64
+    uploadedAt?: string;
+    isLinked?: boolean;
+}
+
+export interface Customer {
+    id: string;
+    type: 'individual' | 'legal_entity';
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    idNumber?: string | null;
+    legalRegNumber?: string | null;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    _count?: {
+        documents: number;
+        contractParties: number;
+        transactionParties: number;
+    };
+}
+
+export interface Contract {
+    id: string;
+    contractNumber?: string | null;
+    type: 'ownership' | 'sale' | 'purchase' | 'lease' | 'other';
+    status: 'draft' | 'active' | 'expired' | 'cancelled';
+    startDate?: string | null;
+    endDate?: string | null;
+    terms?: string | null;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    parties?: ContractPartyWithCustomer[];
+    terrains?: ContractTerrainWithTerrain[];
+    _count?: {
+        documents: number;
+        transactions: number;
+    };
+}
+
+export interface ContractParty {
+    contractId: string;
+    customerId: string;
+    role: string;
+}
+
+export interface ContractPartyWithCustomer extends ContractParty {
+    customer: Customer;
+}
+
+export interface ContractTerrain {
+    contractId: string;
+    terrainId: string;
+}
+
+export interface ContractTerrainWithTerrain extends ContractTerrain {
+    terrain: Terrain;
+}
+
+export interface Transaction {
+    id: string;
+    contractId?: string | null;
+    type: 'sale' | 'purchase';
+    transactionDate: string;
+    price: number;
+    currency: string;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
 }

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
 // Routes
+// Routes
 import parcelsRouter from './routes/parcels.js';
 import uploadRouter from './routes/upload.js';
 import detectRouter from './routes/detect.js';
@@ -11,13 +12,20 @@ import n8nRouter from './routes/n8n.js';
 import terrainsRouter from './routes/terrains.js';
 import customersRouter from './routes/customers.js';
 import contractsRouter from './routes/contracts.js';
-import transactionsRouter from './routes/transactions.js';
 import documentsRouter from './routes/documents.js';
 
 dotenv.config();
 
+// Standard Prisma instantiation
+import { PrismaLibSql } from '@prisma/adapter-libsql';
+
+const adapter = new PrismaLibSql({
+    url: process.env.DATABASE_URL!,
+});
+
+const prisma = new PrismaClient({ adapter });
+
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -48,7 +56,6 @@ app.use('/api/n8n', n8nRouter);
 app.use('/api/terrains', terrainsRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/contracts', contractsRouter);
-app.use('/api/transactions', transactionsRouter);
 app.use('/api/documents', documentsRouter);
 
 // ===========================================
@@ -83,7 +90,7 @@ app.get('/api', (req, res) => {
             terrains: '/api/terrains',
             customers: '/api/customers',
             contracts: '/api/contracts',
-            transactions: '/api/transactions',
+
             documents: '/api/documents',
         },
         n8nWebhooks: {

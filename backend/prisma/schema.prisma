@@ -4,152 +4,122 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================
 // LAND PARCEL DETECTION MODELS
 // ============================================
 
+// CORE MODELS
+// ============================================
+
 model Parcel {
-  id            String   @id @default(uuid())
-  geometry      String   // JSON stringified [[x,y], ...]
-  label         String
-  ownerName     String?
-  status        String   @default("AVAILABLE")
-  paymentStatus String   @default("UNPAID")
-  areaSqm       Float
-  pricePerSqm   Float
-  totalPrice    Float
-  projectId     String?
-  project       Project? @relation(fields: [projectId], references: [id])
-  terrainId     String?  // Link to terrain for aradimon integration
-  terrain       Terrain? @relation(fields: [terrainId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String  @id @default(uuid())
+  geometry    String // JSON stringified [[x,y], ...]
+  label       String
+  ownerName   String?
+  status      String  @default("AVAILABLE") // SOLD, AVAILABLE
+  areaSqm     Float
+  pricePerSqm Float
+  totalPrice  Float
+
+  // Relations
+  terrainId String?
+  terrain   Terrain? @relation(fields: [terrainId], references: [id], onDelete: Cascade)
+
+  customerId String? // The buyer/owner
+  customer   Customer? @relation("PurchasedParcels", fields: [customerId], references: [id], onDelete: SetNull)
+
+  contractId String?
+  contract   Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
+
+  documents ParcelDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Project {
-  id          String   @id @default(uuid())
-  name        String   @default("Untitled Project")
-  imagePath   String
-  imageData   Bytes?   // Store image binary data in database
-  scaleFactor Float?
-  refLineData String?  // JSON for reference line
-  parcels     Parcel[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============================================
-// ARADIMON CORE MODELS
-// ============================================
-
-// Terrains (Land parcels from aradimon)
+// Merged Project and Terrain
 model Terrain {
-  id           String   @id @default(uuid())
+  id           String  @id @default(uuid())
   name         String
   address      String?
   latitude     Float?
   longitude    Float?
   mapReference String?
-  areaSize     Float?
-  areaUnit     String   @default("sqm") // sqm, sqft, hectare, acre
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+
+  // Project/Image Data
+  imagePath   String?
+  imageData   Bytes?
+  scaleFactor Float?
+  refLineData String? // JSON for reference line
+
+  areaSize Float?
+  areaUnit String  @default("sqm")
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  parcels           Parcel[]
-  documents         TerrainDocument[]
-  contracts         ContractTerrain[]
-  transactions      TransactionTerrain[]
-  ownershipHistory  OwnershipHistory[]
+  parcels   Parcel[]
+  documents TerrainDocument[]
 }
 
-// Customers (Individuals or legal entities)
 model Customer {
-  id             String   @id @default(uuid())
-  type           String   @default("individual") // individual, legal_entity
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  idNumber       String?
-  legalRegNumber String?
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  idNumber  String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
+  purchasedParcels Parcel[]           @relation("PurchasedParcels")
+  contracts        Contract[]
   documents        CustomerDocument[]
-  contractParties  ContractParty[]
-  transactionParties TransactionParty[]
-  ownershipHistory OwnershipHistory[]
 }
 
-// Contracts (Ownership, sale, purchase, lease agreements)
 model Contract {
   id             String   @id @default(uuid())
   contractNumber String?
-  type           String   // ownership, sale, purchase, lease, other
-  status         String   @default("draft") // draft, active, expired, cancelled
-  startDate      DateTime?
-  endDate        DateTime?
   terms          String?
   notes          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
-  parties      ContractParty[]
-  terrains     ContractTerrain[]
-  documents    ContractDocument[]
-  transactions Transaction[]
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  parcels   Parcel[]
+  documents ContractDocument[]
 }
 
-// Transactions (Sales and purchases)
-model Transaction {
-  id              String   @id @default(uuid())
-  contractId      String?
-  contract        Contract? @relation(fields: [contractId], references: [id], onDelete: SetNull)
-  type            String   // sale, purchase
-  transactionDate DateTime
-  price           Float
-  currency        String   @default("TND")
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations
-  parties   TransactionParty[]
-  terrains  TransactionTerrain[]
-  documents TransactionDocument[]
-}
-
-// Documents (Files stored locally or in cloud)
 model Document {
-  id           String   @id @default(uuid())
-  name         String
-  filePath     String?  // Local file path
-  fileData     Bytes?   // Store file binary data in database
+  id            String    @id @default(uuid())
+  name          String
+  filePath      String?
+  fileData      Bytes?
   googleDriveId String?
-  mimeType     String?
-  type         String   @default("other") // contract_photo, legal_doc, satellite_image, pdf, other
-  sizeBytes    Int?
-  thumbnailUrl String?
-  uploadedAt   DateTime?
-  createdAt    DateTime @default(now())
-  isLinked     Boolean  @default(false)
+  mimeType      String?
+  type          String    @default("other")
+  sizeBytes     Int?
+  thumbnailUrl  String?
+  uploadedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  isLinked      Boolean   @default(false)
 
   // Relations
-  terrains     TerrainDocument[]
-  customers    CustomerDocument[]
-  contracts    ContractDocument[]
-  transactions TransactionDocument[]
+  terrains  TerrainDocument[]
+  customers CustomerDocument[]
+  contracts ContractDocument[]
+  parcels   ParcelDocument[]
 }
 
-// App Settings
 model AppSetting {
   key   String @id
   value String
@@ -159,88 +129,28 @@ model AppSetting {
 // N8N WORKFLOW INTEGRATION
 // ============================================
 
-// Stores workflow execution logs from n8n
 model WorkflowLog {
-  id           String   @id @default(uuid())
-  workflowId   String   // n8n workflow ID
+  id           String    @id @default(uuid())
+  workflowId   String
   workflowName String?
-  executionId  String?  // n8n execution ID
-  status       String   @default("pending") // pending, running, success, error
-  inputData    String?  // JSON input
-  outputData   String?  // JSON output
+  executionId  String?
+  status       String    @default("pending")
+  inputData    String?
+  outputData   String?
   errorMessage String?
-  startedAt    DateTime @default(now())
+  startedAt    DateTime  @default(now())
   completedAt  DateTime?
 }
 
-// Pending image processing requests for n8n
 model ImageProcessingQueue {
-  id           String   @id @default(uuid())
-  projectId    String?
-  imageData    String   // Base64 or file path
-  status       String   @default("pending") // pending, processing, completed, failed
-  resultData   String?  // JSON result from AI detection
-  webhookUrl   String?  // n8n webhook URL that triggered this
-  createdAt    DateTime @default(now())
-  processedAt  DateTime?
-}
-
-// ============================================
-// JUNCTION TABLES (Many-to-Many relationships)
-// ============================================
-
-// Contract Parties (Links customers to contracts with roles)
-model ContractParty {
-  contractId String
-  customerId String
-  role       String   // owner, buyer, seller, lessor, lessee, party
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@id([contractId, customerId, role])
-}
-
-// Contract Terrains (Links terrains to contracts)
-model ContractTerrain {
-  contractId String
-  terrainId  String
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  terrain    Terrain  @relation(fields: [terrainId], references: [id], onDelete: Cascade)
-
-  @@id([contractId, terrainId])
-}
-
-// Transaction Parties (Links customers to transactions as buyers/sellers)
-model TransactionParty {
-  transactionId String
-  customerId    String
-  role          String      // buyer, seller
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@id([transactionId, customerId, role])
-}
-
-// Transaction Terrains (Links terrains to transactions)
-model TransactionTerrain {
-  transactionId String
-  terrainId     String
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  terrain       Terrain     @relation(fields: [terrainId], references: [id], onDelete: Cascade)
-
-  @@id([transactionId, terrainId])
-}
-
-// Ownership History (Tracks historical ownership of terrains)
-model OwnershipHistory {
-  id         String    @id @default(uuid())
-  terrainId  String
-  customerId String
-  startDate  DateTime
-  endDate    DateTime?
-  notes      String?
-  terrain    Terrain   @relation(fields: [terrainId], references: [id], onDelete: Cascade)
-  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  terrainId   String? // Renamed from projectId to match new schema
+  imageData   String
+  status      String    @default("pending")
+  resultData  String?
+  webhookUrl  String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
 }
 
 // ============================================
@@ -274,11 +184,11 @@ model ContractDocument {
   @@id([contractId, documentId])
 }
 
-model TransactionDocument {
-  transactionId String
-  documentId    String
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  document      Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+model ParcelDocument {
+  parcelId   String
+  documentId String
+  parcel     Parcel   @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  @@id([transactionId, documentId])
+  @@id([parcelId, documentId])
 }

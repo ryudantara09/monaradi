@@ -10,11 +10,14 @@ router.get('/', async (req, res) => {
         const customers = await prisma.customer.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
+                purchasedParcels: {
+                    include: { terrain: true },
+                },
                 _count: {
                     select: {
                         documents: true,
-                        contractParties: true,
-                        transactionParties: true,
+                        contracts: true,
+                        purchasedParcels: true,
                     },
                 },
             },
@@ -36,28 +39,18 @@ router.get('/:id', async (req, res) => {
         const customer = await prisma.customer.findUnique({
             where: { id },
             include: {
+                purchasedParcels: {
+                    include: {
+                        terrain: true,
+                    },
+                },
                 documents: {
                     include: { document: true },
                 },
-                contractParties: {
+                contracts: {
                     include: {
-                        contract: {
-                            include: {
-                                terrains: {
-                                    include: { terrain: true },
-                                },
-                            },
-                        },
+                        parcels: true,
                     },
-                },
-                transactionParties: {
-                    include: {
-                        transaction: true,
-                    },
-                },
-                ownershipHistory: {
-                    include: { terrain: true },
-                    orderBy: { startDate: 'desc' },
                 },
             },
         });
@@ -77,17 +70,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
-        const { type, name, email, phone, address, idNumber, legalRegNumber, notes } = req.body;
+        const { name, email, phone, address, idNumber, notes } = req.body;
 
         const customer = await prisma.customer.create({
             data: {
-                type: type || 'individual',
                 name,
                 email,
                 phone,
                 address,
                 idNumber,
-                legalRegNumber,
                 notes,
             },
         });
@@ -104,18 +95,16 @@ router.put('/:id', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
         const { id } = req.params;
-        const { type, name, email, phone, address, idNumber, legalRegNumber, notes } = req.body;
+        const { name, email, phone, address, idNumber, notes } = req.body;
 
         const customer = await prisma.customer.update({
             where: { id },
             data: {
-                type,
                 name,
                 email,
                 phone,
                 address,
                 idNumber,
-                legalRegNumber,
                 notes,
             },
         });

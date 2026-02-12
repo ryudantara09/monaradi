@@ -10,12 +10,12 @@ router.get('/', async (req, res) => {
         const terrains = await prisma.terrain.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
-                parcels: true,
+                parcels: {
+                    include: { customer: true },
+                },
                 _count: {
                     select: {
                         documents: true,
-                        contracts: true,
-                        transactions: true,
                     },
                 },
             },
@@ -37,19 +37,11 @@ router.get('/:id', async (req, res) => {
         const terrain = await prisma.terrain.findUnique({
             where: { id },
             include: {
-                parcels: true,
+                parcels: {
+                    include: { customer: true },
+                },
                 documents: {
                     include: { document: true },
-                },
-                contracts: {
-                    include: { contract: true },
-                },
-                transactions: {
-                    include: { transaction: true },
-                },
-                ownershipHistory: {
-                    include: { customer: true },
-                    orderBy: { startDate: 'desc' },
                 },
             },
         });
@@ -69,18 +61,34 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
-        const { name, address, latitude, longitude, mapReference, areaSize, areaUnit, notes } = req.body;
+        const {
+            name,
+            address,
+            latitude,
+            longitude,
+            mapReference,
+            areaSize,
+            areaUnit,
+            notes,
+            // Project merged fields
+            imagePath,
+            scaleFactor,
+            refLineData
+        } = req.body;
 
         const terrain = await prisma.terrain.create({
             data: {
                 name,
                 address,
-                latitude,
-                longitude,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
                 mapReference,
-                areaSize,
+                areaSize: areaSize ? parseFloat(areaSize) : null,
                 areaUnit: areaUnit || 'sqm',
                 notes,
+                imagePath,
+                scaleFactor: scaleFactor ? parseFloat(scaleFactor) : null,
+                refLineData,
             },
         });
 
@@ -96,19 +104,34 @@ router.put('/:id', async (req, res) => {
     try {
         const prisma: PrismaClient = req.app.locals.prisma;
         const { id } = req.params;
-        const { name, address, latitude, longitude, mapReference, areaSize, areaUnit, notes } = req.body;
+        const {
+            name,
+            address,
+            latitude,
+            longitude,
+            mapReference,
+            areaSize,
+            areaUnit,
+            notes,
+            imagePath,
+            scaleFactor,
+            refLineData
+        } = req.body;
 
         const terrain = await prisma.terrain.update({
             where: { id },
             data: {
                 name,
                 address,
-                latitude,
-                longitude,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
                 mapReference,
-                areaSize,
+                areaSize: areaSize ? parseFloat(areaSize) : null,
                 areaUnit,
                 notes,
+                imagePath,
+                scaleFactor: scaleFactor ? parseFloat(scaleFactor) : null,
+                refLineData,
             },
         });
 

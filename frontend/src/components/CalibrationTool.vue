@@ -30,11 +30,11 @@ function handleConfirm() {
 <template>
   <div class="bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
     <h3 class="text-lg font-semibold text-slate-100 mb-4">
-      Set Reference Scale
+      Définir l'échelle de référence
     </h3>
 
     <p class="text-sm text-slate-400 mb-4">
-      You've drawn a reference line. Enter the real-world distance this line represents:
+      Vous avez tracé une ligne de référence. Entrez la distance réelle que cette ligne représente :
     </p>
 
     <div class="flex gap-3 items-center mb-6">
@@ -47,7 +47,7 @@ function handleConfirm() {
         class="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         @keyup.enter="handleConfirm"
       />
-      <span class="text-slate-300 font-medium">meters</span>
+      <span class="text-slate-300 font-medium">mètres</span>
     </div>
 
     <div class="flex gap-3">
@@ -55,19 +55,19 @@ function handleConfirm() {
         class="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors"
         @click="$emit('cancel')"
       >
-        Cancel
+        Annuler
       </button>
       <button
         :disabled="!isValid"
         class="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="handleConfirm"
       >
-        Confirm Scale
+        Confirmer l'échelle
       </button>
     </div>
 
     <p v-if="calibrationStore.isCalibrated" class="mt-4 text-sm text-green-400">
-      ✓ Scale factor: {{ calibrationStore.scaleFactor?.toFixed(2) }} px/m
+      ✓ Facteur d'échelle : {{ calibrationStore.scaleFactor?.toFixed(2) }} px/m
     </p>
   </div>
 </template>

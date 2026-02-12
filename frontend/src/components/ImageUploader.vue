@@ -37,7 +37,7 @@ function handleFileSelect(e: Event) {
 
 function processFile(file: File) {
   if (!file.type.match(/^image\/(png|jpe?g)$/)) {
-    alert('Please upload a PNG or JPG image');
+    alert('Veuillez importer une image PNG ou JPG');
     return;
   }
 
@@ -96,10 +96,10 @@ function triggerFileInput() {
 
       <div>
         <p class="text-lg font-medium text-slate-200">
-          Drop your land survey image here
+          Glissez-déposez votre image cadastrale ici
         </p>
         <p class="text-sm text-slate-400 mt-1">
-          or click to browse • PNG, JPG up to 50MB
+          ou cliquez pour parcourir • PNG, JPG jusqu'à 50 Mo
         </p>
       </div>
     </div>
