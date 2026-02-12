@@ -79,127 +79,124 @@ function formatDate(dateStr: string): string {
 </script>
 
 <template>
-  <div class="animate-fade-in">
-    <header class="page-header">
-      <div class="page-header-left">
-        <h1 class="page-title">Tableau de bord</h1>
-        <p class="page-subtitle">Aperçu de votre système de gestion foncière</p>
+  <div class="space-y-8 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Tableau de bord</h1>
+        <p class="text-muted-foreground mt-1">Aperçu de votre système de gestion foncière</p>
       </div>
-      <div class="page-actions">
-        <RouterLink to="/terrains/nouveau" class="btn btn-primary">
+      <div class="flex items-center gap-2">
+         <RouterLink to="/terrains/nouveau" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
           + Ajout Rapide
         </RouterLink>
       </div>
-    </header>
+    </div>
 
     <!-- Stats Grid -->
-    <div class="stats-grid">
-      <RouterLink to="/terrains" class="stat-card" style="text-decoration:none;color:inherit">
-        <div class="stat-icon terrain">🗺️</div>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.terrains }}</span>
-          <span class="stat-label">Terrains</span>
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <!-- Terrains Card -->
+      <RouterLink to="/terrains" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
+        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Terrains</h3>
+          <span class="text-muted-foreground">🗺️</span>
+        </div>
+        <div class="p-6 pt-0">
+          <div class="text-2xl font-bold">{{ stats.terrains }}</div>
+          <p class="text-xs text-muted-foreground mt-1">Terrains enregistrés</p>
         </div>
       </RouterLink>
 
-      <RouterLink to="/clients" class="stat-card" style="text-decoration:none;color:inherit">
-        <div class="stat-icon client">👥</div>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.customers }}</span>
-          <span class="stat-label">Clients</span>
+      <!-- Clients Card -->
+      <RouterLink to="/clients" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
+        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Clients</h3>
+          <span class="text-muted-foreground">👥</span>
+        </div>
+        <div class="p-6 pt-0">
+          <div class="text-2xl font-bold">{{ stats.customers }}</div>
+          <p class="text-xs text-muted-foreground mt-1">Clients actifs</p>
         </div>
       </RouterLink>
 
-      <RouterLink to="/contrats" class="stat-card" style="text-decoration:none;color:inherit">
-        <div class="stat-icon contrat">📜</div>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.activeContracts }}</span>
-          <span class="stat-label">Contrats Actifs</span>
+      <!-- Active Contracts Card -->
+      <RouterLink to="/contrats" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
+        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Contrats Actifs</h3>
+          <span class="text-muted-foreground">📜</span>
+        </div>
+        <div class="p-6 pt-0">
+          <div class="text-2xl font-bold">{{ stats.activeContracts }}</div>
+          <p class="text-xs text-muted-foreground mt-1">En cours d'exécution</p>
         </div>
       </RouterLink>
 
-      <div class="stat-card">
-        <div class="stat-icon projet">📐</div>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.contracts }}</span>
-          <span class="stat-label">Total Contrats</span>
+      <!-- Total Contracts Card -->
+      <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
+        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Total Contrats</h3>
+          <span class="text-muted-foreground">📐</span>
+        </div>
+        <div class="p-6 pt-0">
+          <div class="text-2xl font-bold">{{ stats.contracts }}</div>
+          <p class="text-xs text-muted-foreground mt-1">Historique complet</p>
         </div>
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner" />
-      <p>Chargement des données...</p>
-    </div>
-
-    <!-- Main Content -->
-    <div v-else class="dashboard-content">
-      <!-- Activity Feed -->
-      <div class="content-section">
-        <div class="section-header">
-          <h2 class="section-title">Activité Récente</h2>
+    <!-- Main Content Grid -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <!-- Activity Feed (Col span 4) -->
+      <div class="col-span-4 rounded-xl border bg-card text-card-foreground shadow-sm">
+        <div class="p-6 flex flex-col space-y-1.5">
+          <h3 class="font-semibold leading-none tracking-tight">Activité Récente</h3>
+          <p class="text-sm text-muted-foreground">Derniers événements sur la plateforme</p>
         </div>
-
-        <div v-if="activities.length === 0" class="empty-state">
-          <span class="empty-state-icon">📋</span>
-          <p class="empty-state-title">Aucune activité récente</p>
-          <p class="empty-state-text">Commencez par ajouter un terrain ou un client</p>
-        </div>
-
-        <div v-else class="activity-feed">
-          <div v-for="activity in activities" :key="activity.id" class="activity-item">
-            <span class="activity-icon">{{ activity.icon }}</span>
-            <div class="activity-content">
-              <span class="activity-action">{{ activity.action }}</span>
-              <span class="activity-name">{{ activity.name }}</span>
-            </div>
-            <span class="activity-time">{{ formatDate(activity.date) }}</span>
-          </div>
+        <div class="p-6 pt-0">
+           <div v-if="loading" class="flex items-center justify-center py-8">
+             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+           </div>
+           <div v-else-if="activities.length === 0" class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+             <span class="text-4xl mb-2 opacity-50">📋</span>
+             <p>Aucune activité récente</p>
+           </div>
+           <div v-else class="space-y-4">
+             <div v-for="activity in activities" :key="activity.id" class="flex items-center">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground mr-4 text-sm">
+                  {{ activity.icon }}
+                </span>
+                <div class="space-y-1">
+                  <p class="text-sm font-medium leading-none">{{ activity.name }}</p>
+                  <p class="text-xs text-muted-foreground">{{ activity.action }}</p>
+                </div>
+                <div class="ml-auto font-medium text-xs text-muted-foreground">{{ formatDate(activity.date) }}</div>
+             </div>
+           </div>
         </div>
       </div>
 
-      <!-- Side Content -->
-      <div class="side-content">
-        <div class="content-section" style="padding: var(--space-lg)">
-          <h2 class="section-title" style="margin-bottom: var(--space-md)">Actions Rapides</h2>
-          <div class="quick-actions">
-            <RouterLink to="/terrains/nouveau" class="quick-action">
-              <span class="quick-action-icon">🗺️</span>
-              <span class="quick-action-label">Ajouter Terrain</span>
-            </RouterLink>
-            <RouterLink to="/clients/nouveau" class="quick-action">
-              <span class="quick-action-icon">👤</span>
-              <span class="quick-action-label">Ajouter Client</span>
-            </RouterLink>
-            <RouterLink to="/contrats/nouveau" class="quick-action">
-              <span class="quick-action-icon">📜</span>
-              <span class="quick-action-label">Nouveau Contrat</span>
-            </RouterLink>
-          </div>
-        </div>
-
-        <div class="content-section" style="padding: var(--space-lg)">
-          <h2 class="section-title" style="margin-bottom: var(--space-md)">Résumé</h2>
-          <div style="display:flex;flex-direction:column;gap:var(--space-sm)">
-            <div style="display:flex;justify-content:space-between;font-size:0.875rem">
-              <span style="color:var(--color-text-muted)">Terrains enregistrés</span>
-              <span style="font-weight:600">{{ stats.terrains }}</span>
+      <!-- Quick Actions / Summary (Col span 3) -->
+      <div class="col-span-3 space-y-4">
+         <!-- Quick Actions -->
+         <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
+            <div class="p-6 flex flex-col space-y-1.5">
+              <h3 class="font-semibold leading-none tracking-tight">Actions Rapides</h3>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:0.875rem">
-              <span style="color:var(--color-text-muted)">Clients actifs</span>
-              <span style="font-weight:600">{{ stats.customers }}</span>
+            <div class="p-6 pt-0 grid grid-cols-2 gap-2">
+                <RouterLink to="/terrains/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
+                  <span class="text-2xl">🗺️</span>
+                  <span class="text-xs font-medium">Nouveau Terrain</span>
+                </RouterLink>
+                <RouterLink to="/clients/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
+                  <span class="text-2xl">👤</span>
+                  <span class="text-xs font-medium">Nouveau Client</span>
+                </RouterLink>
+                 <RouterLink to="/contrats/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center col-span-2">
+                  <span class="text-2xl">📜</span>
+                  <span class="text-xs font-medium">Créer un Contrat</span>
+                </RouterLink>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:0.875rem">
-              <span style="color:var(--color-text-muted)">Contrats actifs</span>
-              <span style="font-weight:600;color:var(--color-accent-success)">{{ stats.activeContracts }}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:0.875rem">
-              <span style="color:var(--color-text-muted)">Total contrats</span>
-              <span style="font-weight:600">{{ stats.contracts }}</span>
-            </div>
-          </div>
-        </div>
+         </div>
       </div>
     </div>
   </div>
