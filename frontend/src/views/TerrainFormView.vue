@@ -23,7 +23,6 @@ const formData = ref({
   longitude: '' as string | number,
   mapReference: '',
   notes: '',
-  ownerId: '',
 });
 
 async function handleSubmit() {
@@ -39,7 +38,6 @@ async function handleSubmit() {
       longitude: formData.value.longitude ? Number(formData.value.longitude) : undefined,
       mapReference: formData.value.mapReference || undefined,
       notes: formData.value.notes || undefined,
-      ownerId: formData.value.ownerId || undefined,
     } as any);
     router.push('/terrains');
   } catch (error) {
@@ -83,20 +81,8 @@ async function handleSubmit() {
         </div>
       </div>
 
-      <!-- Owner -->
-      <div class="form-section">
-        <h2 class="form-section-title">Propriétaire</h2>
-        <div class="form-group">
-          <label class="form-label" for="ownerId">Client propriétaire</label>
-          <select id="ownerId" class="input" v-model="formData.ownerId">
-            <option value="">— Aucun propriétaire —</option>
-            <option v-for="c in customers" :key="c.id" :value="c.id">
-              {{ c.name }}
-            </option>
-          </select>
-        </div>
-      </div>
-
+      <!-- Owner - REMOVED as per requirements -->
+      <!-- GeoLoc -->
       <div class="form-section">
         <h2 class="form-section-title">Localisation GPS</h2>
         <div class="form-row">

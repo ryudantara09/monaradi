@@ -88,6 +88,7 @@ model Contract {
   contractNumber String?
   terms          String?
   notes          String?
+  saleAmount     Float?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

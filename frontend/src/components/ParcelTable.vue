@@ -25,18 +25,6 @@ const statusLabels: Record<string, string> = {
   AVAILABLE: 'Disponible',
   SOLD: 'Vendu',
 };
-
-const paymentLabels: Record<string, string> = {
-  UNPAID: 'Non payé',
-  PARTIAL: 'Partiel',
-  PAID: 'Payé',
-};
-
-const paymentColors: Record<string, string> = {
-  UNPAID: 'text-slate-400',
-  PARTIAL: 'text-amber-400',
-  PAID: 'text-green-400',
-};
 </script>
 
 <template>
@@ -57,7 +45,6 @@ const paymentColors: Record<string, string> = {
             <th class="px-6 py-3 border-b border-slate-700">Propriétaire</th>
             <th class="px-6 py-3 border-b border-slate-700 text-right">Surface (m²)</th>
             <th class="px-6 py-3 border-b border-slate-700 text-right">Prix</th>
-            <th class="px-6 py-3 border-b border-slate-700 text-center">Paiement</th>
             <th class="px-6 py-3 border-b border-slate-700"></th>
           </tr>
         </thead>
@@ -89,14 +76,6 @@ const paymentColors: Record<string, string> = {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-slate-200">
               {{ formatTND(parcel.totalPrice) }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-center">
-               <span 
-                class="text-xs font-medium"
-                :class="paymentColors[parcel.paymentStatus]"
-              >
-                {{ paymentLabels[parcel.paymentStatus] || parcel.paymentStatus }}
-              </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
               <button 

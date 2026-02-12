@@ -7,7 +7,7 @@ export interface Parcel {
     label: string;
     ownerName: string | null;
     status: ParcelStatus;
-    paymentStatus: PaymentStatus;
+    // paymentStatus has been removed from backend
     areaSqm: number;
     pricePerSqm: number;
     totalPrice: number; // Auto-calculated: areaSqm * pricePerSqm

@@ -37,7 +37,6 @@ export const useParcelsStore = defineStore('parcels', () => {
             label: label || `Lot ${parcels.value.length + 1}`,
             ownerName: null,
             status: 'AVAILABLE',
-            paymentStatus: 'UNPAID',
             areaSqm,
             pricePerSqm: 0,
             totalPrice: 0,

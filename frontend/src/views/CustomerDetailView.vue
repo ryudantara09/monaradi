@@ -301,7 +301,6 @@ function paymentLabel(status: string): string {
                       <th>Prix/m²</th>
                       <th>Prix Total</th>
                       <th>Statut</th>
-                      <th>Paiement</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -319,17 +318,6 @@ function paymentLabel(status: string): string {
                           }"
                         >
                           {{ statusLabel(parcel.status) }}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          class="status-badge"
-                          :style="{
-                            background: parcel.paymentStatus === 'PAID' ? 'rgba(16,185,129,0.15)' : parcel.paymentStatus === 'PARTIAL' ? 'rgba(245,158,11,0.15)' : 'rgba(107,114,128,0.15)',
-                            color: parcel.paymentStatus === 'PAID' ? '#10b981' : parcel.paymentStatus === 'PARTIAL' ? '#f59e0b' : '#6b7280'
-                          }"
-                        >
-                          {{ paymentLabel(parcel.paymentStatus) }}
                         </span>
                       </td>
                     </tr>

@@ -66,6 +66,7 @@ router.post('/', async (req, res) => {
             contractNumber,
             terms,
             notes,
+            saleAmount,
             customerId,
             parcelIds, // [parcelId, ...]
         } = req.body;
@@ -79,6 +80,7 @@ router.post('/', async (req, res) => {
                 contractNumber,
                 terms,
                 notes,
+                saleAmount: saleAmount ? parseFloat(saleAmount) : undefined,
                 customer: {
                     connect: { id: customerId }
                 },

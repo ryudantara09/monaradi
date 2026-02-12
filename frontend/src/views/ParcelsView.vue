@@ -110,7 +110,8 @@ function statusColor(status: string): string {
         v-for="parcel in filteredParcels"
         :key="parcel.id"
         class="entity-card"
-        style="cursor: default;"
+        style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
+        @click="$router.push(`/parcelles/${parcel.id}`)"
       >
         <div class="entity-card-header">
           <div class="entity-card-avatar">📐</div>
@@ -169,7 +170,11 @@ function statusColor(status: string): string {
         </thead>
         <tbody>
           <tr v-for="parcel in filteredParcels" :key="parcel.id">
-            <td style="font-weight: 600">{{ parcel.label }}</td>
+            <td>
+              <RouterLink :to="`/parcelles/${parcel.id}`" class="table-link" style="font-weight: 600">
+                {{ parcel.label }}
+              </RouterLink>
+            </td>
             <td>
               <RouterLink v-if="parcel.terrain" :to="`/terrains/${parcel.terrain.id}`" class="table-link">
                 {{ parcel.terrain.name }}

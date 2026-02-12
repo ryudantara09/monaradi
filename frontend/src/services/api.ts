@@ -142,6 +142,11 @@ export async function fetchParcels(): Promise<any[]> {
     return data;
 }
 
+export async function fetchParcel(id: string): Promise<any> {
+    const { data } = await api.get(`/parcels/${id}`);
+    return data;
+}
+
 export async function createParcel(parcel: any): Promise<any> {
     const { data } = await api.post('/parcels', parcel);
     return data;

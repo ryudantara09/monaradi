@@ -15,7 +15,6 @@ const form = ref({
   label: '',
   ownerName: '',
   status: 'AVAILABLE' as ParcelStatus,
-  paymentStatus: 'UNPAID' as PaymentStatus,
   pricePerSqm: 0,
 });
 
@@ -30,7 +29,6 @@ watch(parcel, (p) => {
       label: p.label,
       ownerName: p.ownerName || '',
       status: p.status,
-      paymentStatus: p.paymentStatus,
       pricePerSqm: p.pricePerSqm,
     };
     hasChanges.value = false;
@@ -56,7 +54,6 @@ function handleSave() {
     label: form.value.label,
     ownerName: form.value.ownerName || null,
     status: form.value.status,
-    paymentStatus: form.value.paymentStatus,
     pricePerSqm: form.value.pricePerSqm,
   });
   

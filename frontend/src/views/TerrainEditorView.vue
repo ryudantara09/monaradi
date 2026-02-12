@@ -9,6 +9,8 @@ import CalibrationTool from '@/components/CalibrationTool.vue';
 import ParcelSidePanel from '@/components/ParcelSidePanel.vue';
 import { fetchTerrain, fetchDocuments, linkDocument, createParcel, updateParcel, deleteParcel, uploadDocument } from '@/services/api';
 
+const props = defineProps<{ embedded?: boolean }>();
+
 const route = useRoute();
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -191,7 +193,6 @@ async function saveAll() {
         label: p.label,
         ownerName: p.ownerName,
         status: p.status,
-        paymentStatus: p.paymentStatus,
         areaSqm: p.areaSqm,
         pricePerSqm: p.pricePerSqm,
         totalPrice: p.totalPrice,
@@ -230,8 +231,8 @@ const hasImage = computed(() => !!imageDataUrl.value);
 </script>
 
 <template>
-  <div class="editor-layout">
-    <header class="editor-header">
+  <div class="editor-layout" :class="{ 'embedded': embedded }">
+    <header class="editor-header" v-if="!embedded">
        <div style="display:flex;align-items:center;gap:1rem">
          <RouterLink :to="`/terrains/${route.params.id}`" class="back-link">← Retour</RouterLink>
          <h1 v-if="terrain">{{ terrain.name }} - Éditeur</h1>
@@ -242,6 +243,11 @@ const hasImage = computed(() => !!imageDataUrl.value);
           </button>
        </div>
     </header>
+    <div v-else class="embedded-controls" style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+          <button class="btn btn-primary" @click="saveAll" :disabled="saving">
+            {{ saving ? 'Enregistrement...' : '💾 Enregistrer Tout' }}
+          </button>
+    </div>
 
     <div class="editor-body">
       <aside class="sidebar-docs" v-if="!hasImage || unlinkedDocs.length > 0">
@@ -319,6 +325,13 @@ const hasImage = computed(() => !!imageDataUrl.value);
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+.editor-layout.embedded {
+  height: 80vh; /* Embedded height */
+  min-height: 600px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-md);
 }
 .editor-header {
   height: 60px;

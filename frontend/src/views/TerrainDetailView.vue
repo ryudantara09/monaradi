@@ -2,11 +2,14 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel } from '@/services/api';
+import TerrainEditorView from '@/views/TerrainEditorView.vue';
 
 const customers = ref<any[]>([]);
 
 const route = useRoute();
 const router = useRouter();
+const currentTab = ref<'details' | 'visual' | 'documents'>('details');
+
 const terrain = ref<any>(null);
 const isEditing = ref(false);
 const saving = ref(false);
@@ -23,7 +26,6 @@ const parcelForm = ref({
   areaSqm: '' as string | number,
   pricePerSqm: '' as string | number,
   status: 'AVAILABLE',
-  paymentStatus: 'UNPAID',
   customerId: '',
   ownerName: '',
 });
@@ -35,7 +37,6 @@ function openAddParcel() {
     areaSqm: '',
     pricePerSqm: '',
     status: 'AVAILABLE',
-    paymentStatus: 'UNPAID',
     customerId: '',
     ownerName: '',
   };
@@ -49,7 +50,6 @@ function openEditParcel(parcel: any) {
     areaSqm: parcel.areaSqm || '',
     pricePerSqm: parcel.pricePerSqm || '',
     status: parcel.status || 'AVAILABLE',
-    paymentStatus: parcel.paymentStatus || 'UNPAID',
     customerId: parcel.customerId || parcel.customer?.id || '',
     ownerName: parcel.ownerName || '',
   };
@@ -78,7 +78,6 @@ async function handleParcelSave() {
         areaSqm: area,
         pricePerSqm: price,
         status: parcelForm.value.status,
-        paymentStatus: parcelForm.value.paymentStatus,
         customerId: parcelForm.value.customerId || null,
         ownerName: parcelForm.value.ownerName || null,
       });
@@ -89,7 +88,6 @@ async function handleParcelSave() {
         areaSqm: area,
         pricePerSqm: price,
         status: parcelForm.value.status,
-        paymentStatus: parcelForm.value.paymentStatus,
         customerId: parcelForm.value.customerId || null,
         ownerName: parcelForm.value.ownerName || null,
         terrainId: terrain.value.id,
@@ -246,15 +244,6 @@ function statusColor(status: string): string {
   };
   return colors[status] || '#6b7280';
 }
-
-function paymentLabel(status: string): string {
-  const labels: Record<string, string> = {
-    UNPAID: 'Non payé',
-    PARTIAL: 'Partiel',
-    PAID: 'Payé',
-  };
-  return labels[status] || status;
-}
 </script>
 
 <template>
@@ -283,17 +272,34 @@ function paymentLabel(status: string): string {
             </button>
           </template>
           <template v-else>
-            <RouterLink :to="`/terrains/${terrain.id}/edit-visual`" class="btn btn-accent" style="margin-right:0.5rem">
-              📐 Mode Plan / Éditeur
-            </RouterLink>
             <button class="btn btn-secondary" @click="startEdit">✏️ Modifier</button>
             <button class="btn btn-danger" @click="handleDelete">🗑️ Supprimer</button>
           </template>
         </div>
       </header>
 
-      <!-- Stats Bar -->
-      <div class="stats-grid" style="margin-bottom: var(--space-lg)">
+      <!-- Tabs -->
+      <div class="page-tabs" style="margin-bottom:var(--space-lg); border-bottom:1px solid var(--color-border); display:flex; gap:var(--space-md)">
+        <button 
+          class="tab-btn" 
+          :class="{ active: currentTab === 'details' }" 
+          @click="currentTab = 'details'"
+        >
+          📝 Détails & Liste
+        </button>
+        <button 
+          class="tab-btn" 
+          :class="{ active: currentTab === 'visual' }" 
+          @click="currentTab = 'visual'"
+        >
+          📐 Plan & Carte
+        </button>
+      </div>
+
+      <!-- Detail Tab Content -->
+      <div v-if="currentTab === 'details'">
+        <!-- Stats Bar -->
+        <div class="stats-grid" style="margin-bottom: var(--space-lg)">
         <div class="stat-card">
           <div class="stat-icon terrain">📐</div>
           <div class="stat-content">
@@ -658,8 +664,11 @@ function paymentLabel(status: string): string {
         <div class="detail-meta">
           <span>Créé le : {{ new Date(terrain.createdAt).toLocaleString('fr-FR') }}</span>
           <span>Mis à jour le : {{ new Date(terrain.updatedAt).toLocaleString('fr-FR') }}</span>
-        </div>
-      </div>
+        </div>      </div> <!-- End details tab -->
+
+      <!-- Visual Tab -->
+      <div v-if="currentTab === 'visual'" style="margin-top:var(--space-md)">
+         <TerrainEditorView :embedded="true" />      </div>
     </template>
 
     <div v-else class="empty-state">

@@ -64,6 +64,11 @@ const router = createRouter({
             component: () => import('@/views/ParcelsView.vue'),
         },
         {
+            path: '/parcelles/:id',
+            name: 'parcel-detail',
+            component: () => import('@/views/ParcelDetailView.vue'),
+        },
+        {
             path: '/documents',
             name: 'documents',
             component: () => import('@/views/DocumentsView.vue'),

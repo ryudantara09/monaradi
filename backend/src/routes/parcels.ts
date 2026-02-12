@@ -28,6 +28,38 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/parcels/:id - Fetch single parcel with relations
+router.get('/:id', async (req, res) => {
+    try {
+        const prisma: PrismaClient = req.app.locals.prisma;
+        const { id } = req.params;
+
+        const parcel = await prisma.parcel.findUnique({
+            where: { id },
+            include: {
+                customer: true,
+                terrain: true,
+                documents: {
+                    include: { document: true },
+                },
+                contract: true,
+            },
+        });
+
+        if (!parcel) {
+            return res.status(404).json({ error: 'Parcel not found' });
+        }
+
+        res.json({
+            ...parcel,
+            geometry: JSON.parse(parcel.geometry),
+        });
+    } catch (error) {
+        console.error('Error fetching parcel:', error);
+        res.status(500).json({ error: 'Failed to fetch parcel' });
+    }
+});
+
 // POST /api/parcels - Create new parcel
 router.post('/', async (req, res) => {
     try {
