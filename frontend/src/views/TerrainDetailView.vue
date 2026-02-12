@@ -664,7 +664,9 @@ function statusColor(status: string): string {
         <div class="detail-meta">
           <span>Créé le : {{ new Date(terrain.createdAt).toLocaleString('fr-FR') }}</span>
           <span>Mis à jour le : {{ new Date(terrain.updatedAt).toLocaleString('fr-FR') }}</span>
-        </div>      </div> <!-- End details tab -->
+        </div>
+      </div>
+      </div> <!-- End details tab -->
 
       <!-- Visual Tab -->
       <div v-if="currentTab === 'visual'" style="margin-top:var(--space-md)">
