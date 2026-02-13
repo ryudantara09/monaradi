@@ -1,17 +1,26 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { LayoutDashboard, LandPlot, Users, Square, FileText, FolderOpen, X, Menu } from '@/lib/icons';
+import type { Component } from 'vue';
 
 const route = useRoute();
 const sidebarOpen = ref(false);
 
-const navItems = [
-  { path: '/', label: 'Tableau de bord', icon: '🏠', exact: true },
-  { path: '/terrains', label: 'Terrains', icon: '🗺️' },
-  { path: '/clients', label: 'Clients', icon: '👥' },
-  { path: '/parcelles', label: 'Parcelles', icon: '📐' },
-  { path: '/contrats', label: 'Contrats', icon: '📜' },
-  { path: '/documents', label: 'Documents', icon: '📂' },
+interface NavItem {
+  path: string;
+  label: string;
+  icon: Component;
+  exact?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { path: '/', label: 'Tableau de bord', icon: LayoutDashboard, exact: true },
+  { path: '/terrains', label: 'Terrains', icon: LandPlot },
+  { path: '/clients', label: 'Clients', icon: Users },
+  { path: '/parcelles', label: 'Parcelles', icon: Square },
+  { path: '/contrats', label: 'Contrats', icon: FileText },
+  { path: '/documents', label: 'Documents', icon: FolderOpen },
 ];
 
 function toggleSidebar() {
@@ -32,7 +41,8 @@ function isActive(path: string, exact?: boolean): boolean {
   <div class="app-layout bg-background text-foreground">
     <!-- Mobile Toggle -->
     <button class="md:hidden fixed top-4 left-4 z-50 p-2 border border-border rounded-md bg-background" @click="toggleSidebar" aria-label="Ouvrir le menu">
-      {{ sidebarOpen ? '✕' : '☰' }}
+      <X v-if="sidebarOpen" class="h-5 w-5" :stroke-width="1.5" />
+      <Menu v-else class="h-5 w-5" :stroke-width="1.5" />
     </button>
 
     <!-- Sidebar -->
@@ -59,8 +69,8 @@ function isActive(path: string, exact?: boolean): boolean {
         >
           <!-- Active Indicator Bar -->
           <div v-if="isActive(item.path, item.exact)" class="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-primary rounded-r-full"></div>
-          
-          <span class="text-lg opacity-80 group-hover:opacity-100 transition-opacity">{{ item.icon }}</span>
+
+          <component :is="item.icon" class="h-5 w-5" :stroke-width="1.5" />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>

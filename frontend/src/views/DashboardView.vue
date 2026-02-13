@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LandPlot, Users, FileText, Plus, User as UserIcon, CheckCircle2 } from '@/lib/icons';
+import type { Component } from 'vue';
 import { fetchTerrains, fetchCustomers, fetchContracts } from '@/services/api';
 import type { Terrain, Customer, Contract } from '@/types';
 
@@ -10,7 +14,7 @@ interface Activity {
   action: string;
   name: string;
   date: string;
-  icon: string;
+  icon: Component;
 }
 
 const stats = ref({ terrains: 0, customers: 0, contracts: 0, activeContracts: 0 });
@@ -40,7 +44,7 @@ onMounted(async () => {
         action: 'Terrain ajouté',
         name: t.name,
         date: t.createdAt,
-        icon: '🗺️',
+        icon: LandPlot,
       })),
       ...customers.map((c: Customer) => ({
         id: c.id,
@@ -48,7 +52,7 @@ onMounted(async () => {
         action: 'Client ajouté',
         name: c.name,
         date: c.createdAt,
-        icon: '👤',
+        icon: UserIcon,
       })),
       ...contracts.map((c: Contract) => ({
         id: c.id,
@@ -56,7 +60,7 @@ onMounted(async () => {
         action: 'Contrat créé',
         name: c.contractNumber || 'Sans numéro',
         date: c.createdAt,
-        icon: '📜',
+        icon: FileText,
       })),
     ];
 
@@ -87,61 +91,78 @@ function formatDate(dateStr: string): string {
         <p class="text-muted-foreground mt-1">Aperçu de votre système de gestion foncière</p>
       </div>
       <div class="flex items-center gap-2">
-         <RouterLink to="/terrains/nouveau" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
-          + Ajout Rapide
-        </RouterLink>
+        <Button as-child>
+          <RouterLink to="/terrains/nouveau">
+            <Plus class="mr-2 h-4 w-4" />
+            Ajout Rapide
+          </RouterLink>
+        </Button>
       </div>
     </div>
 
     <!-- Stats Grid -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <!-- Terrains Card -->
-      <RouterLink to="/terrains" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
-        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Terrains</h3>
-          <span class="text-muted-foreground">🗺️</span>
-        </div>
-        <div class="p-6 pt-0">
-          <div class="text-2xl font-bold">{{ stats.terrains }}</div>
-          <p class="text-xs text-muted-foreground mt-1">Terrains enregistrés</p>
-        </div>
+      <RouterLink to="/terrains" class="block">
+        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
+              Terrains
+            </CardTitle>
+            <LandPlot class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
+          </CardHeader>
+          <CardContent>
+            <div class="text-2xl font-bold tracking-tight">{{ stats.terrains }}</div>
+            <p class="text-xs text-muted-foreground mt-1">Terrains enregistrés</p>
+          </CardContent>
+        </Card>
       </RouterLink>
 
       <!-- Clients Card -->
-      <RouterLink to="/clients" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
-        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Clients</h3>
-          <span class="text-muted-foreground">👥</span>
-        </div>
-        <div class="p-6 pt-0">
-          <div class="text-2xl font-bold">{{ stats.customers }}</div>
-          <p class="text-xs text-muted-foreground mt-1">Clients actifs</p>
-        </div>
+      <RouterLink to="/clients" class="block">
+        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
+              Clients
+            </CardTitle>
+            <Users class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
+          </CardHeader>
+          <CardContent>
+            <div class="text-2xl font-bold tracking-tight">{{ stats.customers }}</div>
+            <p class="text-xs text-muted-foreground mt-1">Clients actifs</p>
+          </CardContent>
+        </Card>
       </RouterLink>
 
       <!-- Active Contracts Card -->
-      <RouterLink to="/contrats" class="rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 block">
-        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Contrats Actifs</h3>
-          <span class="text-muted-foreground">📜</span>
-        </div>
-        <div class="p-6 pt-0">
-          <div class="text-2xl font-bold">{{ stats.activeContracts }}</div>
-          <p class="text-xs text-muted-foreground mt-1">En cours d'exécution</p>
-        </div>
+      <RouterLink to="/contrats" class="block">
+        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
+          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
+              Contrats Actifs
+            </CardTitle>
+            <CheckCircle2 class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
+          </CardHeader>
+          <CardContent>
+            <div class="text-2xl font-bold tracking-tight">{{ stats.activeContracts }}</div>
+            <p class="text-xs text-muted-foreground mt-1">En cours d'exécution</p>
+          </CardContent>
+        </Card>
       </RouterLink>
 
       <!-- Total Contracts Card -->
-      <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
-        <div class="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-          <h3 class="tracking-tight text-sm font-medium text-muted-foreground">Total Contrats</h3>
-          <span class="text-muted-foreground">📐</span>
-        </div>
-        <div class="p-6 pt-0">
-          <div class="text-2xl font-bold">{{ stats.contracts }}</div>
+      <Card class="shadow-none border-border/60">
+        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
+            Total Contrats
+          </CardTitle>
+          <FileText class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold tracking-tight">{{ stats.contracts }}</div>
           <p class="text-xs text-muted-foreground mt-1">Historique complet</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Main Content Grid -->
@@ -157,13 +178,13 @@ function formatDate(dateStr: string): string {
              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
            </div>
            <div v-else-if="activities.length === 0" class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-             <span class="text-4xl mb-2 opacity-50">📋</span>
+             <FileText class="h-12 w-12 mb-4 opacity-50" :stroke-width="1.5" />
              <p>Aucune activité récente</p>
            </div>
            <div v-else class="space-y-4">
              <div v-for="activity in activities" :key="activity.id" class="flex items-center">
-                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground mr-4 text-sm">
-                  {{ activity.icon }}
+                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground mr-4">
+                  <component :is="activity.icon" class="h-4 w-4" :stroke-width="1.5" />
                 </span>
                 <div class="space-y-1">
                   <p class="text-sm font-medium leading-none">{{ activity.name }}</p>
@@ -184,15 +205,15 @@ function formatDate(dateStr: string): string {
             </div>
             <div class="p-6 pt-0 grid grid-cols-2 gap-2">
                 <RouterLink to="/terrains/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
-                  <span class="text-2xl">🗺️</span>
+                  <LandPlot class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
                   <span class="text-xs font-medium">Nouveau Terrain</span>
                 </RouterLink>
                 <RouterLink to="/clients/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
-                  <span class="text-2xl">👤</span>
+                  <UserIcon class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
                   <span class="text-xs font-medium">Nouveau Client</span>
                 </RouterLink>
                  <RouterLink to="/contrats/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center col-span-2">
-                  <span class="text-2xl">📜</span>
+                  <FileText class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
                   <span class="text-xs font-medium">Créer un Contrat</span>
                 </RouterLink>
             </div>
