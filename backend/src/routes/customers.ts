@@ -11,7 +11,10 @@ router.get('/', async (req, res) => {
             orderBy: { createdAt: 'desc' },
             include: {
                 purchasedParcels: {
-                    include: { terrain: true },
+                    include: {
+                        terrain: true,
+                        contract: true,
+                    },
                 },
                 _count: {
                     select: {
@@ -42,6 +45,7 @@ router.get('/:id', async (req, res) => {
                 purchasedParcels: {
                     include: {
                         terrain: true,
+                        contract: true,
                     },
                 },
                 documents: {

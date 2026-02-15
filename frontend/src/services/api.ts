@@ -80,14 +80,11 @@ export async function fetchContract(id: string): Promise<Contract> {
 
 export interface CreateContractPayload {
     contractNumber?: string;
-    type: string;
-    status?: string;
-    startDate?: string;
-    endDate?: string;
     terms?: string;
     notes?: string;
-    parties?: { customerId: string; role: string }[];
-    terrainIds?: string[];
+    saleAmount?: number;
+    customerId: string;
+    parcelIds?: string[];
 }
 
 export async function createContract(payload: CreateContractPayload): Promise<Contract> {

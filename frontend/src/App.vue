@@ -1,7 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
-import { LayoutDashboard, LandPlot, Users, Square, FileText, FolderOpen, X, Menu } from '@/lib/icons';
+import { 
+  LayoutDashboard, 
+  LandPlot, 
+  Users, 
+  Square, 
+  FileText, 
+  FolderOpen, 
+  X, 
+  Menu, 
+  Search, 
+  Plus, 
+  Settings, 
+  LogOut, 
+  ChevronDown 
+} from '@/lib/icons';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Component } from 'vue';
 
 const route = useRoute();
@@ -38,56 +53,122 @@ function isActive(path: string, exact?: boolean): boolean {
 </script>
 
 <template>
-  <div class="app-layout bg-background text-foreground">
+  <div class="app-layout min-h-screen bg-background text-foreground flex font-sans">
     <!-- Mobile Toggle -->
-    <button class="md:hidden fixed top-4 left-4 z-50 p-2 border border-border rounded-md bg-background" @click="toggleSidebar" aria-label="Ouvrir le menu">
+    <button 
+      class="md:hidden fixed top-4 left-4 z-50 p-2 border border-border rounded-md bg-background shadow-md" 
+      @click="toggleSidebar" 
+      aria-label="Toggle menu"
+    >
       <X v-if="sidebarOpen" class="h-5 w-5" :stroke-width="1.5" />
       <Menu v-else class="h-5 w-5" :stroke-width="1.5" />
     </button>
+    
+    <!-- Overlay for mobile -->
+    <div 
+      v-if="sidebarOpen" 
+      class="fixed inset-0 bg-black/50 z-30 md:hidden"
+      @click="closeSidebar"
+    ></div>
 
     <!-- Sidebar -->
-    <aside class="sidebar w-[240px] bg-muted/10 border-r border-border fixed h-full z-40 transition-transform duration-300 ease-in-out" :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen, 'md:translate-x-0': true }">
-      <div class="p-6 border-b border-border/40">
-        <RouterLink to="/" class="flex items-center gap-2" @click="closeSidebar">
-          <div class="h-8 w-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">M</div>
-          <span class="text-lg font-bold tracking-tight">Monaradi</span>
+    <aside 
+      class="fixed left-0 top-0 bottom-0 z-40 w-[280px] bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    >
+      <!-- User Profile Trigger / Logo Area -->
+      <div class="h-16 flex items-center px-6 border-b border-sidebar-border bg-sidebar shrink-0">
+        <RouterLink to="/" class="flex items-center gap-3 w-full" @click="closeSidebar">
+          <div class="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-bold">M</div>
+          <span class="text-lg font-bold tracking-tight text-sidebar-foreground">Monaradi</span>
         </RouterLink>
       </div>
 
-      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <!-- Navigation -->
+      <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+        <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">Menu Principal</div>
         <RouterLink
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
-          class="group flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors relative"
+          class="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 relative"
           :class="[
             isActive(item.path, item.exact) 
-              ? 'text-primary bg-accent' 
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              ? 'bg-sidebar-accent text-primary' 
+              : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground'
           ]"
           @click="closeSidebar"
         >
-          <!-- Active Indicator Bar -->
-          <div v-if="isActive(item.path, item.exact)" class="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-primary rounded-r-full"></div>
-
-          <component :is="item.icon" class="h-5 w-5" :stroke-width="1.5" />
+          <component 
+            :is="item.icon" 
+            class="h-5 w-5 transition-colors" 
+            :class="isActive(item.path, item.exact) ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'"
+            :stroke-width="1.5" 
+          />
           <span>{{ item.label }}</span>
+          
+          <!-- Active Indicator -->
+          <div v-if="isActive(item.path, item.exact)" class="absolute right-2 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(76,167,88,0.5)]"></div>
         </RouterLink>
       </nav>
 
-      <div class="p-4 border-t border-border/40">
-        <div class="text-xs text-muted-foreground font-medium flex items-center gap-2">
-          <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-          Monaradi v3.0
-        </div>
+      <!-- User Account Section (Fixed Bottom) -->
+      <div class="p-4 border-t border-sidebar-border bg-sidebar">
+        <button class="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left group">
+          <Avatar class="h-9 w-9 border border-sidebar-border">
+            <AvatarImage src="https://github.com/shadcn.png" alt="@maatarmed" />
+            <AvatarFallback class="bg-primary/10 text-primary">MM</AvatarFallback>
+          </Avatar>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">Maatar Med</p>
+            <p class="text-xs text-muted-foreground truncate">admin@monaradi.com</p>
+          </div>
+          <LogOut class="h-4 w-4 text-muted-foreground group-hover:text-destructive transition-colors" />
+        </button>
       </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content flex-1 md:ml-[240px] min-h-screen bg-background">
-      <div class="container mx-auto p-6 md:p-8 max-w-7xl">
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col min-h-screen md:ml-[280px] transition-all duration-300">
+      <!-- Top Header -->
+      <header class="h-16 sticky top-0 z-20 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/60 border-b border-sidebar-border flex items-center justify-between px-6 gap-4">
+        <!-- Search -->
+        <div class="flex-1 max-w-xl mx-auto hidden md:block">
+          <div class="relative group">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Rechercher..." 
+              class="w-full h-10 pl-10 pr-4 rounded-full bg-background border border-input focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none text-sm transition-all placeholder:text-muted-foreground/70"
+            />
+          </div>
+        </div>
+
+        <!-- Right Definitions -->
+        <div class="flex items-center gap-3 ml-auto">
+          <button class="md:hidden p-2 text-muted-foreground hover:text-foreground">
+            <Search class="h-5 w-5" />
+          </button>
+          
+          <button class="p-2 text-muted-foreground hover:text-foreground relative">
+             <Settings class="h-5 w-5" />
+          </button>
+
+          <button class="bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(76,167,88,0.25)] flex items-center gap-2">
+            <Plus class="h-4 w-4" />
+            <span class="hidden sm:inline">Créer</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Content Area -->
+      <main class="flex-1 p-6 md:p-8 bg-background overflow-x-hidden">
         <RouterView />
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Any component-specific styles if needed, mostly handled by Tailwind */
+</style>

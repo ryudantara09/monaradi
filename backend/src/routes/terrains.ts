@@ -13,7 +13,11 @@ router.get('/', async (req, res) => {
                 parcels: {
                     include: {
                         customer: true,
-                        contract: true
+                        contract: {
+                            include: {
+                                customer: true,
+                            },
+                        },
                     },
                 },
                 _count: {
@@ -59,7 +63,11 @@ router.get('/:id', async (req, res) => {
                 parcels: {
                     include: {
                         customer: true,
-                        contract: true
+                        contract: {
+                            include: {
+                                customer: true,
+                            },
+                        },
                     },
                 },
                 documents: {

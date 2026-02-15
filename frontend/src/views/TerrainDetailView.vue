@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel } from '@/services/api';
+import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract } from '@/services/api';
 import TerrainEditorView from '@/views/TerrainEditorView.vue';
-import { LandPlot, Square, User, Building2, Phone, Pencil, Trash2, FileText, MapPin, CheckCircle2, XCircle, AlertCircle, DollarSign, File, Plus } from '@/lib/icons';
+import { LandPlot, Square, User, Building2, Pencil, Trash2, FileText, MapPin, XCircle, AlertCircle, File, Plus } from '@/lib/icons';
 
 const customers = ref<any[]>([]);
 
@@ -22,6 +22,7 @@ const formData = ref<any>({});
 const showParcelModal = ref(false);
 const parcelSaving = ref(false);
 const editingParcelId = ref<string | null>(null);
+const parcelModalError = ref<string | null>(null);
 const parcelForm = ref({
   label: '',
   areaSqm: '' as string | number,
@@ -29,10 +30,20 @@ const parcelForm = ref({
   status: 'AVAILABLE',
   customerId: '',
   ownerName: '',
+  contractNumber: '',
+  contractTerms: '',
+  contractNotes: '',
 });
+
+function parseApiError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
+const shouldShowContractFields = computed(() => !!parcelForm.value.customerId);
 
 function openAddParcel() {
   editingParcelId.value = null;
+  parcelModalError.value = null;
   parcelForm.value = {
     label: '',
     areaSqm: '',
@@ -40,12 +51,16 @@ function openAddParcel() {
     status: 'AVAILABLE',
     customerId: '',
     ownerName: '',
+    contractNumber: '',
+    contractTerms: '',
+    contractNotes: '',
   };
   showParcelModal.value = true;
 }
 
 function openEditParcel(parcel: any) {
   editingParcelId.value = parcel.id;
+  parcelModalError.value = null;
   parcelForm.value = {
     label: parcel.label || '',
     areaSqm: parcel.areaSqm || '',
@@ -53,6 +68,9 @@ function openEditParcel(parcel: any) {
     status: parcel.status || 'AVAILABLE',
     customerId: parcel.customerId || parcel.customer?.id || '',
     ownerName: parcel.ownerName || '',
+    contractNumber: parcel.contract?.contractNumber || '',
+    contractTerms: parcel.contract?.terms || '',
+    contractNotes: parcel.contract?.notes || '',
   };
   showParcelModal.value = true;
 }
@@ -60,37 +78,72 @@ function openEditParcel(parcel: any) {
 function closeParcelModal() {
   showParcelModal.value = false;
   editingParcelId.value = null;
+  parcelModalError.value = null;
+}
+
+async function ensureContractForCustomer(customerId: string, saleAmount: number, currentParcel?: any): Promise<string> {
+  if (currentParcel?.contractId && currentParcel.customerId === customerId) {
+    return currentParcel.contractId;
+  }
+
+  const contract = await createContract({
+    customerId,
+    contractNumber: parcelForm.value.contractNumber || undefined,
+    terms: parcelForm.value.contractTerms || undefined,
+    notes: parcelForm.value.contractNotes || undefined,
+    saleAmount,
+    parcelIds: [],
+  });
+
+  return contract.id;
 }
 
 async function handleParcelSave() {
+  parcelModalError.value = null;
   if (!parcelForm.value.label.trim()) {
-    alert('Le nom de la parcelle est requis');
+    parcelModalError.value = 'Le nom de la parcelle est requis.';
     return;
   }
+
+  if (parcelForm.value.status === 'SOLD' && !parcelForm.value.customerId) {
+    parcelModalError.value = 'Une vente nécessite un acheteur et un contrat. Sélectionnez un acheteur.';
+    return;
+  }
+
   parcelSaving.value = true;
   try {
     const area = Number(parcelForm.value.areaSqm) || 0;
     const price = Number(parcelForm.value.pricePerSqm) || 0;
+    const saleAmount = area * price;
+    const selectedParcel = editingParcelId.value
+      ? terrain.value?.parcels?.find((p: any) => p.id === editingParcelId.value)
+      : null;
+
+    let contractId: string | null = null;
+    const hasBuyer = !!parcelForm.value.customerId;
+    if (hasBuyer) {
+      contractId = await ensureContractForCustomer(parcelForm.value.customerId, saleAmount, selectedParcel);
+    }
+
+    const finalStatus = hasBuyer ? 'SOLD' : 'AVAILABLE';
+
+    const payload = {
+      label: parcelForm.value.label,
+      areaSqm: area,
+      pricePerSqm: price,
+      status: finalStatus,
+      customerId: hasBuyer ? parcelForm.value.customerId : null,
+      contractId,
+      ownerName: parcelForm.value.ownerName || null,
+    };
 
     if (editingParcelId.value) {
       // UPDATE
-      await updateParcel(editingParcelId.value, {
-        label: parcelForm.value.label,
-        areaSqm: area,
-        pricePerSqm: price,
-        status: parcelForm.value.status,
-        customerId: parcelForm.value.customerId || null,
-        ownerName: parcelForm.value.ownerName || null,
-      });
+      await updateParcel(editingParcelId.value, payload);
     } else {
       // CREATE
       await createParcel({
-        label: parcelForm.value.label,
-        areaSqm: area,
-        pricePerSqm: price,
-        status: parcelForm.value.status,
-        customerId: parcelForm.value.customerId || null,
-        ownerName: parcelForm.value.ownerName || null,
+        ...payload,
         terrainId: terrain.value.id,
         geometry: [[0, 0]], // placeholder geometry
       });
@@ -99,8 +152,16 @@ async function handleParcelSave() {
     terrain.value = await fetchTerrain(terrain.value.id);
     closeParcelModal();
   } catch (err) {
-    console.error('Erreur sauvegarde parcelle:', err);
-    alert('Erreur lors de la sauvegarde de la parcelle');
+    const parsedMessage = parseApiError(err, 'Erreur lors de la sauvegarde de la parcelle.');
+    console.error('Erreur sauvegarde parcelle:', {
+      error: err,
+      parcelId: editingParcelId.value,
+      terrainId: terrain.value?.id,
+      payload: { ...parcelForm.value },
+      terrainArea: terrain.value?.areaSize,
+      totalParcelsArea: totalParcelArea.value,
+    });
+    parcelModalError.value = parsedMessage;
   } finally {
     parcelSaving.value = false;
   }
@@ -202,15 +263,40 @@ function formatPrice(price: number | null | undefined): string {
 }
 
 // Computed for parcel stats
-const totalParcels = computed(() => terrain.value?.parcels?.length || 0);
-const soldParcels = computed(() => terrain.value?.parcels?.filter((p: any) => p.status === 'SOLD')?.length || 0);
-const availableParcels = computed(() => terrain.value?.parcels?.filter((p: any) => p.status === 'AVAILABLE')?.length || 0);
-const reservedParcels = computed(() => terrain.value?.parcels?.filter((p: any) => p.status === 'RESERVED')?.length || 0);
-const totalRevenue = computed(() => {
+const totalParcelArea = computed(() => {
   if (!terrain.value?.parcels) return 0;
-  return terrain.value.parcels
-    .filter((p: any) => p.status === 'SOLD')
-    .reduce((sum: number, p: any) => sum + (p.totalPrice || 0), 0);
+  return terrain.value.parcels.reduce((sum: number, p: any) => sum + (Number(p.areaSqm) || 0), 0);
+});
+const availableTerrainArea = computed(() => {
+  const terrainArea = Number(terrain.value?.areaSize) || 0;
+  if (!terrainArea) return 0;
+  return Math.max(terrainArea - totalParcelArea.value, 0);
+});
+const isTerrainAreaExceeded = computed(() => {
+  const terrainArea = Number(terrain.value?.areaSize) || 0;
+  if (!terrainArea) return false;
+  return totalParcelArea.value > terrainArea;
+});
+const contractsFromParcels = computed(() => {
+  if (!terrain.value?.parcels) return [];
+
+  const contractMap = new Map<string, { id: string; contract: any; parcels: any[]; buyer: any }>();
+  for (const parcel of terrain.value.parcels) {
+    if (!parcel.contractId || !parcel.contract) continue;
+    if (!contractMap.has(parcel.contractId)) {
+      contractMap.set(parcel.contractId, {
+        id: parcel.contractId,
+        contract: parcel.contract,
+        parcels: [],
+        buyer: parcel.customer || null,
+      });
+    }
+    contractMap.get(parcel.contractId)!.parcels.push(parcel);
+  }
+
+  return Array.from(contractMap.values()).sort((a, b) =>
+    new Date(b.contract?.createdAt || 0).getTime() - new Date(a.contract?.createdAt || 0).getTime()
+  );
 });
 
 // Distinct buyers for this terrain
@@ -346,6 +432,12 @@ function paymentLabel(status: string): string {
                 <span class="info-value">{{ formatArea(terrain) }}</span>
               </div>
               <div class="info-item">
+                <span class="info-label"><AlertCircle class="h-4 w-4 inline" :stroke-width="1.5" /> Surface disponible</span>
+                <span class="info-value" :style="{ color: isTerrainAreaExceeded ? '#ef4444' : 'var(--color-text-primary)' }">
+                  {{ availableTerrainArea.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m²
+                </span>
+              </div>
+              <div class="info-item">
                 <span class="info-label"><LandPlot class="h-4 w-4 inline" :stroke-width="1.5" /> Référence cadastrale</span>
                 <span class="info-value">{{ terrain.mapReference || '—' }}</span>
               </div>
@@ -353,6 +445,15 @@ function paymentLabel(status: string): string {
                 <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Adresse</span>
                 <span class="info-value">{{ terrain.address || '—' }}</span>
               </div>
+              <div v-if="terrain.areaSize" class="info-item full-width">
+                <span class="info-label"><Square class="h-4 w-4 inline" :stroke-width="1.5" /> Répartition des surfaces</span>
+                <span class="info-value" :style="{ color: isTerrainAreaExceeded ? '#ef4444' : 'var(--color-text-secondary)' }">
+                  Parcelles : {{ totalParcelArea.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m² / Terrain : {{ Number(terrain.areaSize).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m²
+                </span>
+              </div>
+            </div>
+            <div v-if="isTerrainAreaExceeded" style="margin-top:var(--space-sm);padding:var(--space-sm) var(--space-md);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.9rem;">
+              La somme des parcelles dépasse la surface du terrain. Ajustez les surfaces pour revenir dans la limite autorisée.
             </div>
           </template>
         </div>
@@ -477,24 +578,23 @@ function paymentLabel(status: string): string {
         <!-- Contracts -->
         <div class="detail-section">
           <h2 class="section-title">Contrats de vente</h2>
-          <template v-if="terrain.contracts && terrain.contracts.length > 0">
+          <template v-if="contractsFromParcels.length > 0">
             <div class="related-items">
               <RouterLink
-                v-for="ct in terrain.contracts"
-                :key="ct.contractId"
-                :to="`/contrats/${ct.contractId}`"
+                v-for="ct in contractsFromParcels"
+                :key="ct.id"
+                :to="`/contrats/${ct.id}`"
                 class="related-item"
               >
                 <span><FileText class="h-4 w-4 inline" :stroke-width="1.5" /></span>
                 <div style="flex:1">
                   <div style="font-weight:600">
-                    Contrat {{ ct.contract?.contractNumber || `#${ct.contractId.slice(0, 8)}` }}
+                    Contrat {{ ct.contract?.contractNumber || `#${ct.id.slice(0, 8)}` }}
                   </div>
                   <div style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    {{ formatDate(ct.contract?.startDate) }}
-                    <template v-if="ct.contract?.parties?.length">
-                      — Acheteur : {{ ct.contract.parties[0]?.customer?.name || '—' }}
-                    </template>
+                    {{ formatDate(ct.contract?.createdAt) }}
+                    — Acheteur : {{ ct.buyer?.name || ct.contract?.customer?.name || '—' }}
+                    — {{ ct.parcels.length }} parcelle{{ ct.parcels.length > 1 ? 's' : '' }}
                   </div>
                 </div>
               </RouterLink>
@@ -688,6 +788,37 @@ function paymentLabel(status: string): string {
                   {{ c.name }}
                 </option>
               </select>
+            </div>
+
+            <div v-if="shouldShowContractFields" class="form-group" style="margin-top:var(--space-md);padding:var(--space-md);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card)">
+              <label class="form-label" style="margin-bottom:var(--space-sm)">Détails du contrat (vente)</label>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">N° contrat</label>
+                  <input type="text" class="input" v-model="parcelForm.contractNumber" placeholder="ex: CTR-2026-001" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Montant estimé</label>
+                  <input
+                    type="text"
+                    class="input"
+                    :value="formatPrice((Number(parcelForm.areaSqm) || 0) * (Number(parcelForm.pricePerSqm) || 0))"
+                    readonly
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Conditions</label>
+                <textarea class="input textarea" v-model="parcelForm.contractTerms" rows="2" placeholder="Conditions du contrat (optionnel)" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes contrat</label>
+                <textarea class="input textarea" v-model="parcelForm.contractNotes" rows="2" placeholder="Notes (optionnel)" />
+              </div>
+            </div>
+
+            <div v-if="parcelModalError" style="margin-top:var(--space-sm);padding:var(--space-sm) var(--space-md);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.875rem;white-space:pre-wrap;">
+              {{ parcelModalError }}
             </div>
           </div>
           <div class="modal-footer">

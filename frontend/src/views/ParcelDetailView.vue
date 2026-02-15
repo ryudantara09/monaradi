@@ -25,42 +25,83 @@ async function handleDelete() {
     await deleteParcel(parcel.value.id);
     router.go(-1); // Go back
   } catch (err) {
-    alert('Erreur suppression');
+    console.error('Erreur suppression parcelle:', err);
+    alert('Erreur lors de la suppression de la parcelle');
   }
 }
 
 function formatTND(val: number) {
-  return val ? val.toLocaleString('fr-FR', { minimumFractionDigits: 3 }) + ' TND' : '—';
+  return (val || val === 0) ? val.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' TND' : '—';
+}
+
+function statusLabel(status: string) {
+  if (status === 'SOLD') return 'Vendue';
+  if (status === 'RESERVED') return 'Réservée';
+  return 'Disponible';
+}
+
+function paymentLabel(status?: string) {
+  if (status === 'PAID') return 'Payé';
+  if (status === 'PARTIAL') return 'Partiel';
+  return 'Non payé';
+}
+
+function paymentBadgeClass(status?: string) {
+  if (status === 'PAID') return 'badge-paid';
+  if (status === 'PARTIAL') return 'badge-partial';
+  return 'badge-unpaid';
+}
+
+function statusBadgeClass(status: string) {
+  if (status === 'SOLD') return 'badge-sold';
+  if (status === 'RESERVED') return 'badge-reserved';
+  return 'badge-available';
+}
+
+function formatDate(value?: string) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 </script>
 
 <template>
-  <div v-if="loading" class="p-8 text-center">Chargement...</div>
-  <div v-else-if="!parcel" class="p-8 text-center">Parcelle introuvable</div>
-  <div v-else class="animate-fade-in space-y-6">
+  <div v-if="loading" class="loading-state">
+    <div class="loading-spinner" />
+    <p>Chargement de la parcelle...</p>
+  </div>
+
+  <div v-else-if="!parcel" class="empty-state">Parcelle introuvable</div>
+
+  <div v-else class="animate-fade-in detail-page">
     <header class="page-header">
       <div class="page-header-left">
         <RouterLink to="/terrains" class="back-link">← Retour</RouterLink>
         <h1 class="page-title">{{ parcel.label }}</h1>
-        <div class="flex gap-2">
-           <span class="badge" :class="parcel.status === 'SOLD' ? 'badge-error' : 'badge-success'">
-             {{ parcel.status === 'SOLD' ? 'Vendu' : 'Disponible' }}
-           </span>
+        <div class="header-badges">
+          <span class="badge" :class="statusBadgeClass(parcel.status)">
+            {{ statusLabel(parcel.status) }}
+          </span>
+          <span class="badge" :class="paymentBadgeClass(parcel.paymentStatus)">
+            Paiement: {{ paymentLabel(parcel.paymentStatus) }}
+          </span>
         </div>
       </div>
-      <div class="page-header-right">
+      <div class="page-actions">
         <button @click="handleDelete" class="btn btn-danger">Supprimer</button>
       </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- General Info -->
-      <div class="card">
-        <h2 class="card-title">Informations</h2>
-        <div class="space-y-4">
+    <section class="summary-grid">
+      <article class="summary-card">
+        <h2 class="card-title">Valorisation</h2>
+        <div class="info-list">
           <div class="info-row">
             <span class="label">Surface</span>
-            <span class="value">{{ parcel.areaSqm }} m²</span>
+            <span class="value">{{ Number(parcel.areaSqm || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m²</span>
           </div>
           <div class="info-row">
             <span class="label">Prix / m²</span>
@@ -68,15 +109,24 @@ function formatTND(val: number) {
           </div>
           <div class="info-row">
             <span class="label">Prix Total</span>
-            <span class="value font-bold text-accent">{{ formatTND(parcel.totalPrice) }}</span>
+            <span class="value value-strong">{{ formatTND(parcel.totalPrice) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Montant payé</span>
+            <span class="value">{{ formatTND(parcel.amountPaid) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Reste à payer</span>
+            <span class="value" :class="Number(parcel.totalPrice || 0) - Number(parcel.amountPaid || 0) > 0 ? 'text-warning' : 'text-success'">
+              {{ formatTND(Math.max(Number(parcel.totalPrice || 0) - Number(parcel.amountPaid || 0), 0)) }}
+            </span>
           </div>
         </div>
-      </div>
+      </article>
 
-      <!-- Relations -->
-      <div class="card">
+      <article class="summary-card">
         <h2 class="card-title">Relations</h2>
-        <div class="space-y-4">
+        <div class="info-list">
           <div class="info-row">
             <span class="label">Terrain</span>
             <span class="value">
@@ -99,64 +149,137 @@ function formatTND(val: number) {
             <span class="label">Contrat</span>
             <span class="value">
               <RouterLink v-if="parcel.contract" :to="`/contrats/${parcel.contract.id}`" class="link">
-                Voir Contrat
+                {{ parcel.contract.contractNumber || `#${parcel.contract.id.slice(0, 8)}` }}
               </RouterLink>
               <span v-else>—</span>
             </span>
           </div>
+          <div class="info-row">
+            <span class="label">Créée le</span>
+            <span class="value">{{ formatDate(parcel.createdAt) }}</span>
+          </div>
         </div>
-      </div>
-    </div>
+      </article>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.card {
+.detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+.summary-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
 }
+
 .card-title {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 600;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   color: var(--color-text-primary);
 }
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
 .info-row {
   display: flex;
   justify-content: space-between;
-  padding: var(--space-xs) 0;
+  align-items: center;
+  padding: var(--space-sm) 0;
   border-bottom: 1px solid var(--color-border);
 }
+
 .info-row:last-child {
   border-bottom: none;
 }
+
 .label {
   color: var(--color-text-muted);
+  font-size: 0.875rem;
 }
+
 .value {
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
+
+.value-strong {
+  font-size: 1.05rem;
+}
+
 .link {
   color: var(--color-primary);
   text-decoration: none;
 }
+
 .link:hover {
   text-decoration: underline;
 }
+
+.header-badges {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
 .badge {
-  padding: 0.25rem 0.75rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
 }
-.badge-success {
+
+.badge-available {
   background-color: rgba(16, 185, 129, 0.2);
-  color: rgb(52, 211, 153);
+  color: #10b981;
 }
-.badge-error {
+
+.badge-sold {
   background-color: rgba(239, 68, 68, 0.2);
-  color: rgb(248, 113, 113);
+  color: #ef4444;
+}
+
+.badge-reserved {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.badge-paid {
+  background-color: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+}
+
+.badge-partial {
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+}
+
+.badge-unpaid {
+  background-color: rgba(107, 114, 128, 0.22);
+  color: #6b7280;
+}
+
+.text-warning {
+  color: #f59e0b;
+}
+
+.text-success {
+  color: #10b981;
 }
 </style>

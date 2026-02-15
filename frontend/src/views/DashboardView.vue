@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import MetricsCard from '@/components/MetricsCard.vue';
 import { Button } from '@/components/ui/button';
 import { LandPlot, Users, FileText, Plus, User as UserIcon, CheckCircle2 } from '@/lib/icons';
 import type { Component } from 'vue';
@@ -101,68 +102,58 @@ function formatDate(dateStr: string): string {
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <!-- Terrains Card -->
-      <RouterLink to="/terrains" class="block">
-        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
-          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
-              Terrains
-            </CardTitle>
-            <LandPlot class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-2xl font-bold tracking-tight">{{ stats.terrains }}</div>
-            <p class="text-xs text-muted-foreground mt-1">Terrains enregistrés</p>
-          </CardContent>
-        </Card>
+      <RouterLink to="/terrains" class="block group no-underline">
+        <MetricsCard 
+          title="Terrains"
+          :value="stats.terrains"
+          :icon="LandPlot"
+          status="info"
+          :progress="75"
+          :trend="12"
+          class="h-full"
+        />
       </RouterLink>
 
       <!-- Clients Card -->
-      <RouterLink to="/clients" class="block">
-        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
-          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
-              Clients
-            </CardTitle>
-            <Users class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-2xl font-bold tracking-tight">{{ stats.customers }}</div>
-            <p class="text-xs text-muted-foreground mt-1">Clients actifs</p>
-          </CardContent>
-        </Card>
+      <RouterLink to="/clients" class="block group no-underline">
+        <MetricsCard 
+          title="Clients"
+          :value="stats.customers"
+          :icon="Users"
+          status="warning"
+          :progress="60"
+          :trend="5"
+          class="h-full"
+        />
       </RouterLink>
 
       <!-- Active Contracts Card -->
-      <RouterLink to="/contrats" class="block">
-        <Card class="shadow-none border-border/60 transition-all hover:shadow-md hover:border-primary/50">
-          <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
-              Contrats Actifs
-            </CardTitle>
-            <CheckCircle2 class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-2xl font-bold tracking-tight">{{ stats.activeContracts }}</div>
-            <p class="text-xs text-muted-foreground mt-1">En cours d'exécution</p>
-          </CardContent>
-        </Card>
+      <RouterLink to="/contrats" class="block group no-underline">
+        <MetricsCard 
+          title="Contrats Actifs"
+          :value="stats.activeContracts"
+          :icon="CheckCircle2"
+          status="success"
+          :progress="88"
+          :trend="24"
+          class="h-full"
+        />
       </RouterLink>
 
       <!-- Total Contracts Card -->
-      <Card class="shadow-none border-border/60">
-        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle class="text-sm font-medium text-muted-foreground uppercase tracking-tight">
-            Total Contrats
-          </CardTitle>
-          <FileText class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
-        </CardHeader>
-        <CardContent>
-          <div class="text-2xl font-bold tracking-tight">{{ stats.contracts }}</div>
-          <p class="text-xs text-muted-foreground mt-1">Historique complet</p>
-        </CardContent>
-      </Card>
+      <RouterLink to="/contrats" class="block group no-underline">
+        <MetricsCard 
+          title="Total Contrats"
+          :value="stats.contracts"
+          :icon="FileText"
+          status="info"
+          :progress="45"
+          :trend="-2"
+          class="h-full"
+        />
+      </RouterLink>
     </div>
 
     <!-- Main Content Grid -->

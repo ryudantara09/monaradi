@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useParcelsStore } from '@/stores/parcels';
 import { useCalibrationStore } from '@/stores/calibration';
-import { AlertCircle } from '@/lib/icons';
+import { AlertCircle, Eye } from '@/lib/icons';
+import { Badge } from '@/components/ui/badge';
 
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -17,80 +18,89 @@ function selectParcel(id: string) {
   parcelsStore.selectParcel(id);
 }
 
-const statusColors: Record<string, string> = {
-  AVAILABLE: 'bg-green-500/20 text-green-400 border-green-500/30',
-  SOLD: 'bg-red-500/20 text-red-400 border-red-500/30',
+const statusVariant: Record<string, "success" | "destructive" | "default" | "secondary" | "outline" | "warning" | "info"> = {
+  AVAILABLE: 'success',
+  SOLD: 'destructive',
+  PENDING: 'warning',
 };
 
 const statusLabels: Record<string, string> = {
   AVAILABLE: 'Disponible',
   SOLD: 'Vendu',
+  PENDING: 'En attente',
 };
 </script>
 
 <template>
-  <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-xl mt-6">
-    <div class="p-4 border-b border-slate-700 flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-slate-100">Répertoire des Parcelles</h3>
-      <div class="text-sm text-slate-400">
-        {{ parcelsStore.parcels.length }} au total
+  <div class="bg-card rounded-2xl overflow-hidden border border-border shadow-sm mt-6">
+    <div class="p-6 border-b border-border flex items-center justify-between bg-card">
+      <div>
+        <h3 class="text-lg font-semibold text-foreground tracking-tight">Répertoire des Parcelles</h3>
+        <p class="text-sm text-muted-foreground mt-1">Liste complète des lots et disponibilités</p>
+      </div>
+      <div class="text-sm font-medium px-3 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+        {{ parcelsStore.parcels.length }} enregistrements
       </div>
     </div>
 
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="bg-slate-900/50 text-xs font-medium text-slate-400 uppercase tracking-wider">
-            <th class="px-6 py-3 border-b border-slate-700">Libellé</th>
-            <th class="px-6 py-3 border-b border-slate-700">Statut</th>
-            <th class="px-6 py-3 border-b border-slate-700">Propriétaire</th>
-            <th class="px-6 py-3 border-b border-slate-700 text-right">Surface (m²)</th>
-            <th class="px-6 py-3 border-b border-slate-700 text-right">Prix</th>
-            <th class="px-6 py-3 border-b border-slate-700"></th>
+          <tr class="bg-muted/30 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+            <th class="px-6 py-4">Libellé</th>
+            <th class="px-6 py-4">Statut</th>
+            <th class="px-6 py-4">Propriétaire</th>
+            <th class="px-6 py-4 text-right">Surface (m²)</th>
+            <th class="px-6 py-4 text-right">Prix</th>
+            <th class="px-6 py-4"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-700">
+        <tbody class="divide-y divide-border">
           <tr 
             v-for="parcel in parcelsStore.parcels" 
-            :key="parcel.id"
-            class="group transition-colors cursor-pointer hover:bg-slate-700/50"
-            :class="{ 'bg-primary/10 hover:bg-primary/20': parcelsStore.selectedParcelId === parcel.id }"
+            :key="parcel.id" 
+            class="hover:bg-muted/40 transition-colors cursor-pointer group"
             @click="selectParcel(parcel.id)"
           >
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="font-medium text-slate-200">{{ parcel.label }}</div>
+            <td class="px-6 py-4 font-medium text-foreground">
+              {{ parcel.label }}
+              <div class="text-xs text-muted-foreground mt-0.5 font-normal">Lot #{{ parcel.id.substring(0, 4) }}</div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span 
-                class="px-2.5 py-1 rounded-full text-xs font-medium border"
-                :class="statusColors[parcel.status] || statusColors.AVAILABLE"
-              >
+            <td class="px-6 py-4">
+              <Badge :variant="statusVariant[parcel.status] || 'default'" class="px-2.5 py-1">
                 {{ statusLabels[parcel.status] || parcel.status }}
-              </span>
+              </Badge>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-slate-300">{{ parcel.ownerName || '—' }}</div>
+            <td class="px-6 py-4 text-sm text-muted-foreground">
+              <div v-if="parcel.ownerId" class="flex items-center gap-2">
+                <div class="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                  {{ parcel.ownerId.substring(0, 1) }}
+                </div>
+                <span class="text-foreground">Client #{{ parcel.ownerId.substring(0, 4) }}</span>
+              </div>
+              <span v-else class="text-muted-foreground italic">-</span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-slate-300 font-mono">
-              {{ parcel.areaSqm.toFixed(2) }}
-              <AlertCircle v-if="!calibrationStore.isCalibrated" class="h-3.5 w-3.5 text-amber-500 ml-1 inline" :stroke-width="1.5" title="Non calibré" />
+            <td class="px-6 py-4 text-right font-mono text-sm text-foreground">
+              {{ Math.round(parcel.area).toLocaleString() }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-slate-200">
-              {{ formatTND(parcel.totalPrice) }}
+            <td class="px-6 py-4 text-right font-mono text-sm font-medium text-foreground">
+              {{ formatTND(parcel.price) }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            <td class="px-6 py-4 text-right">
               <button 
-                class="text-primary hover:text-blue-400"
+                class="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-primary transition-all rounded-full hover:bg-primary/10"
                 @click.stop="selectParcel(parcel.id)"
               >
-                Voir
+                <Eye class="h-4 w-4" />
               </button>
             </td>
           </tr>
-          
           <tr v-if="parcelsStore.parcels.length === 0">
-            <td colspan="7" class="px-6 py-12 text-center text-slate-500">
-              Aucune parcelle. Dessinez ou utilisez l'auto-détection pour commencer.
+            <td colspan="6" class="px-6 py-12 text-center text-muted-foreground">
+              <div class="flex flex-col items-center justify-center gap-3">
+                <AlertCircle class="h-10 w-10 text-muted-foreground/50" />
+                <p>Aucune parcelle trouvée</p>
+              </div>
             </td>
           </tr>
         </tbody>

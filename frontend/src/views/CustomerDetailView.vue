@@ -92,6 +92,26 @@ const totalInvestment = computed(() => {
   return customer.value.purchasedParcels.reduce((sum: number, p: any) => sum + (p.totalPrice || 0), 0);
 });
 
+const customerContracts = computed(() => {
+  const directContracts = customer.value?.contracts || [];
+  const contractsFromParcels = (customer.value?.purchasedParcels || [])
+    .filter((p: any) => p.contract)
+    .map((p: any) => p.contract);
+
+  const merged = [...directContracts, ...contractsFromParcels];
+  const uniqueMap = new Map<string, any>();
+  for (const contract of merged) {
+    if (!contract?.id) continue;
+    if (!uniqueMap.has(contract.id)) {
+      uniqueMap.set(contract.id, contract);
+    }
+  }
+
+  return Array.from(uniqueMap.values()).sort((a, b) =>
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+});
+
 // Group parcels by terrain
 const parcelsByTerrain = computed(() => {
   if (!customer.value?.purchasedParcels) return [];
@@ -327,24 +347,23 @@ function statusColor(status: string): string {
         <!-- Contracts -->
         <div class="detail-section">
           <h2 class="section-title">Contrats associés</h2>
-          <template v-if="customer.contractParties && customer.contractParties.length > 0">
+          <template v-if="customerContracts.length > 0">
             <div class="related-items">
               <RouterLink
-                v-for="cp in customer.contractParties"
-                :key="cp.contractId"
-                :to="`/contrats/${cp.contractId}`"
+                v-for="contract in customerContracts"
+                :key="contract.id"
+                :to="`/contrats/${contract.id}`"
                 class="related-item"
               >
                 <FileText class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">
-                    Contrat {{ cp.contract?.contractNumber || `#${cp.contractId.slice(0, 8)}` }}
+                    Contrat {{ contract.contractNumber || `#${contract.id.slice(0, 8)}` }}
                   </div>
                   <div style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    {{ cp.role === 'buyer' ? 'Acheteur' : (cp.role === 'seller' ? 'Vendeur' : cp.role) }}
-                    — {{ formatDate(cp.contract?.startDate) }}
-                    <template v-if="cp.contract?.terrains?.length">
-                      — Terrain: {{ cp.contract.terrains[0]?.terrain?.name || '—' }}
+                    Créé le {{ formatDate(contract.createdAt) }}
+                    <template v-if="contract.parcels?.length">
+                      — {{ contract.parcels.length }} parcelle{{ contract.parcels.length > 1 ? 's' : '' }}
                     </template>
                   </div>
                 </div>

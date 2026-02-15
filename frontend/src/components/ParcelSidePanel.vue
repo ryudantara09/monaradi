@@ -25,6 +25,10 @@ const form = ref({
 const hasChanges = ref(false);
 const saveMessage = ref<string | null>(null);
 
+function parseApiError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
 // Sync form with selected parcel
 watch(parcel, (p) => {
   if (p) {
@@ -111,8 +115,18 @@ async function handleSave() {
       saveMessage.value = null;
     }, 2000);
   } catch (error) {
-    console.error('Error saving parcel:', error);
-    saveMessage.value = 'Erreur lors de la sauvegarde';
+    const parsedMessage = parseApiError(error, 'Erreur lors de la sauvegarde');
+    console.error('Error saving parcel:', {
+      error,
+      parcelId: parcel.value?.id,
+      payload: {
+        label: form.value.label,
+        status: form.value.status,
+        pricePerSqm: form.value.pricePerSqm,
+        amountPaid: form.value.amountPaid,
+      },
+    });
+    saveMessage.value = parsedMessage;
     setTimeout(() => {
       saveMessage.value = null;
     }, 3000);
@@ -309,9 +323,12 @@ void _paymentOptions;
         <!-- Save Message -->
         <div
           v-if="saveMessage"
-          class="px-3 py-2 bg-green-600/20 border border-green-500/30 rounded-lg text-green-400 text-sm text-center"
+          class="px-3 py-2 border rounded-lg text-sm text-center"
+          :class="saveMessage.includes('Erreur') || saveMessage.includes('Cannot') || saveMessage.includes('Impossible')
+            ? 'bg-red-600/20 border-red-500/30 text-red-400'
+            : 'bg-green-600/20 border-green-500/30 text-green-400'"
         >
-          ✓ {{ saveMessage }}
+          {{ (saveMessage.includes('Erreur') || saveMessage.includes('Cannot') || saveMessage.includes('Impossible')) ? '✕' : '✓' }} {{ saveMessage }}
         </div>
         
         <!-- Unsaved Changes Indicator -->

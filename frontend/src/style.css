@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@200,300,400,500,600,700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -6,7 +6,7 @@
 
 :root {
   /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Base - Light Mode Default (Corporate Fintech) */
   --background: oklch(1 0 0);
@@ -86,48 +86,66 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  /* Background: #141416 */
+  --background: #141416;
+  /* Foreground: #FFFFFF (White) */
+  --foreground: #FFFFFF;
 
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  /* Card: #222327 */
+  --card: #222327;
+  --card-foreground: #FFFFFF;
 
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  /* Popover: #222327 */
+  --popover: #222327;
+  --popover-foreground: #FFFFFF;
 
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Primary: #4CA758 (Green) */
+  --primary: #4CA758;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  /* Secondary: #2C2D33 (Hover state mentioned) or similar */
+  --secondary: #2C2D33;
+  --secondary-foreground: #FFFFFF;
 
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  /* Muted: #1A1B1E (Sidebar bg) or #2E2F36 */
+  --muted: #1A1B1E;
+  --muted-foreground: #9CA3AF; /* gray-400 */
 
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Accent: #2C2D33 (Hover state) */
+  --accent: #2C2D33;
+  --accent-foreground: #FFFFFF;
 
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  /* Destructive: #EF4444 (Red) */
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Border: #2E2F36 */
+  --border: #2E2F36;
+  --input: #2E2F36;
+  --ring: #4CA758; /* Match primary */
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Sidebar: #1A1B1E */
+  --sidebar-width: 280px;
+  --sidebar: #1A1B1E;
+  --sidebar-foreground: #9CA3AF; /* gray-400 */
+  --sidebar-primary: #4CA758;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #222327;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #2E2F36;
+  --sidebar-ring: #4CA758;
+  
+  /* Additional status colors from spec */
+  --warning: #F59E0B;
+  --info: #3B82F6;
+  --success: #4CA758;
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Chart Colors (Aligned with palette) */
+  --chart-1: #4CA758; /* Green */
+  --chart-2: #3B82F6; /* Blue */
+  --chart-3: #F59E0B; /* Orange */
+  --chart-4: #EF4444; /* Red */
+  --chart-5: #9CA3AF; /* Gray */
 }
 
 @theme inline {
