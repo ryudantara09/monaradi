@@ -140,11 +140,39 @@ function startDrawing() {
   mode.value = mode.value === 'draw' ? 'view' : 'draw';
 }
 
-function handlePolygonComplete(points: [number, number][]) {
-  parcelsStore.createParcel(
+async function handlePolygonComplete(points: [number, number][]) {
+  // Create the parcel in the frontend store first to show it immediately
+  const tempParcel = parcelsStore.createParcel(
     points,
     calibrationStore.scaleFactor || 1,
   );
+
+  // Immediately save to the database
+  try {
+    const savedParcel = await createParcel({
+      geometry: points,
+      label: tempParcel.label,
+      areaSqm: tempParcel.areaSqm,
+      pricePerSqm: 0,
+      status: 'AVAILABLE',
+      terrainId: terrain.value.id
+    });
+
+    // Update the store with the database-returned parcel (which has a real DB ID)
+    parcelsStore.deleteParcel(tempParcel.id);
+    parcelsStore.setParcels([...parcelsStore.parcels, {
+      ...savedParcel,
+      geometry: typeof savedParcel.geometry === 'string'
+        ? JSON.parse(savedParcel.geometry)
+        : savedParcel.geometry
+    }]);
+  } catch (error) {
+    console.error('Error saving parcel:', error);
+    // Remove the temporary parcel if saving failed
+    parcelsStore.deleteParcel(tempParcel.id);
+    alert('Error saving parcel to database');
+  }
+
   mode.value = 'view';
 }
 
@@ -159,11 +187,36 @@ async function detectBoundaries() {
     });
     const data = await response.json();
     if (data.polygons && Array.isArray(data.polygons)) {
-       for (const polygon of data.polygons) {
-         if (polygon.length >= 3) {
-            parcelsStore.createParcel(polygon, calibrationStore.scaleFactor || 1);
-         }
-       }
+      for (const polygon of data.polygons) {
+        if (polygon.length >= 3) {
+          // Create temporary parcel in store for immediate display
+          const tempParcel = parcelsStore.createParcel(polygon, calibrationStore.scaleFactor || 1);
+
+          try {
+            // Immediately save to database
+            const savedParcel = await createParcel({
+              geometry: polygon,
+              label: tempParcel.label,
+              areaSqm: tempParcel.areaSqm,
+              pricePerSqm: 0,
+              status: 'AVAILABLE',
+              terrainId: terrain.value.id
+            });
+
+            // Replace temp parcel with database version
+            parcelsStore.deleteParcel(tempParcel.id);
+            parcelsStore.setParcels([...parcelsStore.parcels, {
+              ...savedParcel,
+              geometry: typeof savedParcel.geometry === 'string'
+                ? JSON.parse(savedParcel.geometry)
+                : savedParcel.geometry
+            }]);
+          } catch (error) {
+            console.error('Error saving detected parcel:', error);
+            parcelsStore.deleteParcel(tempParcel.id);
+          }
+        }
+      }
     }
   } catch (error) {
     console.error('Detection error', error);

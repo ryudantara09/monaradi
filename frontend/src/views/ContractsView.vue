@@ -24,8 +24,8 @@ const filteredContracts = computed(() => {
   if (!q) return contracts.value;
   return contracts.value.filter(c =>
     c.contractNumber?.toLowerCase().includes(q) ||
-    c.parties?.some(p => p.customer?.name.toLowerCase().includes(q)) ||
-    c.terrains?.some(t => t.terrain?.name.toLowerCase().includes(q))
+    c.customer?.name?.toLowerCase().includes(q) ||
+    c.parcels?.some(p => p.label?.toLowerCase().includes(q) || p.terrain?.name?.toLowerCase().includes(q))
   );
 });
 
@@ -57,7 +57,7 @@ function formatDate(dateStr: string | null | undefined): string {
         <input
           type="text"
           class="input search-input"
-          placeholder="Rechercher par client, terrain ou N° contrat..."
+          placeholder="Rechercher par client, parcelle ou N° contrat..."
           v-model="searchQuery"
         />
       </div>
@@ -87,7 +87,7 @@ function formatDate(dateStr: string | null | undefined): string {
           <tr>
             <th>N° contrat</th>
             <th>Acheteur</th>
-            <th>Terrain</th>
+            <th>Parcelles</th>
             <th>Date</th>
           </tr>
         </thead>
@@ -99,23 +99,18 @@ function formatDate(dateStr: string | null | undefined): string {
               </RouterLink>
             </td>
             <td>
-              <template v-if="contract.parties?.length">
-                <span v-for="(party, i) in contract.parties" :key="i">
-                  {{ party.customer?.name || '—' }}{{ i < contract.parties.length - 1 ? ', ' : '' }}
-                </span>
-              </template>
-              <span v-else class="text-muted-foreground">—</span>
+              {{ contract.customer?.name || '—' }}
             </td>
             <td>
-              <template v-if="contract.terrains?.length">
-                <span v-for="(ct, i) in contract.terrains" :key="i" class="inline-flex items-center gap-1">
+              <template v-if="contract.parcels?.length">
+                <span v-for="(parcel, i) in contract.parcels" :key="i" class="inline-flex items-center gap-1">
                   <LandPlot class="h-3.5 w-3.5 text-muted-foreground" :stroke-width="1.5" />
-                  {{ ct.terrain?.name || '—' }}{{ i < contract.terrains.length - 1 ? ', ' : '' }}
+                  {{ parcel.label || '—' }}{{ i < contract.parcels.length - 1 ? ', ' : '' }}
                 </span>
               </template>
               <span v-else class="text-muted-foreground">—</span>
             </td>
-            <td>{{ formatDate(contract.startDate) }}</td>
+            <td>{{ formatDate(contract.createdAt) }}</td>
           </tr>
         </tbody>
       </table>

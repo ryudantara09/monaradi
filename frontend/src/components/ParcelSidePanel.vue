@@ -4,6 +4,7 @@ import { useParcelsStore } from '@/stores/parcels';
 import { useCalibrationStore } from '@/stores/calibration';
 import type { ParcelStatus, PaymentStatus } from '@/types';
 import { Save, Trash2 } from '@/lib/icons';
+import { updateParcel as updateParcelAPI, deleteParcel as deleteParcelAPI } from '@/services/api';
 
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -17,6 +18,7 @@ const form = ref({
   ownerName: '',
   status: 'AVAILABLE' as ParcelStatus,
   pricePerSqm: 0,
+  amountPaid: 0,
 });
 
 // Track if form has unsaved changes
@@ -31,6 +33,7 @@ watch(parcel, (p) => {
       ownerName: p.ownerName || '',
       status: p.status,
       pricePerSqm: p.pricePerSqm,
+      amountPaid: p.amountPaid || 0,
     };
     hasChanges.value = false;
     saveMessage.value = null;
@@ -48,29 +51,84 @@ const totalPrice = computed(() => {
   return parcel.value.areaSqm * form.value.pricePerSqm;
 });
 
-function handleSave() {
+const remainingAmount = computed(() => {
+  return totalPrice.value - form.value.amountPaid;
+});
+
+const paymentStatusComputed = computed((): PaymentStatus => {
+  if (form.value.amountPaid >= totalPrice.value && totalPrice.value > 0) {
+    return 'PAID';
+  } else if (form.value.amountPaid > 0) {
+    return 'PARTIAL';
+  }
+  return 'UNPAID';
+});
+
+const paymentStatusLabel = computed(() => {
+  switch (paymentStatusComputed.value) {
+    case 'PAID': return 'Payé';
+    case 'PARTIAL': return 'Partiel';
+    case 'UNPAID': return 'Non payé';
+  }
+});
+
+const paymentStatusColor = computed(() => {
+  switch (paymentStatusComputed.value) {
+    case 'PAID': return 'text-green-400 bg-green-400/20 border-green-500/30';
+    case 'PARTIAL': return 'text-amber-400 bg-amber-400/20 border-amber-500/30';
+    case 'UNPAID': return 'text-red-400 bg-red-400/20 border-red-500/30';
+  }
+});
+
+async function handleSave() {
   if (!parcel.value) return;
-  
-  parcelsStore.updateParcel(parcel.value.id, {
-    label: form.value.label,
-    ownerName: form.value.ownerName || null,
-    status: form.value.status,
-    pricePerSqm: form.value.pricePerSqm,
-  });
-  
-  hasChanges.value = false;
-  saveMessage.value = 'Modifications enregistrées !';
-  
-  // Clear save message after 2 seconds
-  setTimeout(() => {
-    saveMessage.value = null;
-  }, 2000);
+
+  try {
+    // Save to database via API
+    const updatedParcel = await updateParcelAPI(parcel.value.id, {
+      label: form.value.label,
+      ownerName: form.value.ownerName || null,
+      status: form.value.status,
+      pricePerSqm: form.value.pricePerSqm,
+      amountPaid: form.value.amountPaid,
+      geometry: parcel.value.geometry,
+      areaSqm: parcel.value.areaSqm,
+    });
+
+    // Update local store with the response from the server
+    parcelsStore.updateParcel(parcel.value.id, {
+      ...updatedParcel,
+      geometry: typeof updatedParcel.geometry === 'string'
+        ? JSON.parse(updatedParcel.geometry)
+        : updatedParcel.geometry
+    });
+
+    hasChanges.value = false;
+    saveMessage.value = 'Modifications enregistrées !';
+
+    // Clear save message after 2 seconds
+    setTimeout(() => {
+      saveMessage.value = null;
+    }, 2000);
+  } catch (error) {
+    console.error('Error saving parcel:', error);
+    saveMessage.value = 'Erreur lors de la sauvegarde';
+    setTimeout(() => {
+      saveMessage.value = null;
+    }, 3000);
+  }
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (!parcel.value) return;
   if (confirm('Êtes-vous sûr de vouloir supprimer cette parcelle ?')) {
-    parcelsStore.deleteParcel(parcel.value.id);
+    try {
+      await deleteParcelAPI(parcel.value.id);
+      parcelsStore.deleteParcel(parcel.value.id);
+    } catch (error) {
+      console.error('Error deleting parcel:', error);
+      alert('Erreur lors de la suppression de la parcelle');
+    }
   }
 }
 
@@ -203,6 +261,44 @@ void _paymentOptions;
           <div class="px-3 py-3 bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/30 rounded-lg">
             <span class="text-2xl font-bold text-primary">
               {{ totalPrice.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) }} TND
+            </span>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <hr class="border-slate-700" />
+
+        <!-- Amount Paid (Accompte) -->
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Montant Payé (Accompte)</label>
+          <div class="relative">
+            <input
+              v-model.number="form.amountPaid"
+              type="number"
+              min="0"
+              :max="totalPrice"
+              step="0.001"
+              class="w-full px-3 pr-14 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              @input="markChanged"
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">TND</span>
+          </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Statut de paiement</label>
+          <div :class="`px-3 py-2 border rounded-lg text-center font-medium ${paymentStatusColor}`">
+            {{ paymentStatusLabel }}
+          </div>
+        </div>
+
+        <!-- Remaining Amount -->
+        <div v-if="remainingAmount > 0">
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Montant Restant</label>
+          <div class="px-3 py-2 bg-amber-600/20 border border-amber-500/30 rounded-lg">
+            <span class="text-xl font-bold text-amber-400">
+              {{ remainingAmount.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) }} TND
             </span>
           </div>
         </div>

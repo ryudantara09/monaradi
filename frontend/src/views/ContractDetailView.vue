@@ -76,7 +76,7 @@ function formatDate(dateStr: string | null | undefined): string {
             </div>
             <div class="info-item">
               <span class="info-label"><Calendar class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Date de vente</span>
-              <span class="info-value">{{ formatDate(contract.startDate) }}</span>
+              <span class="info-value">{{ formatDate(contract.createdAt) }}</span>
             </div>
           </div>
         </div>
@@ -84,19 +84,17 @@ function formatDate(dateStr: string | null | undefined): string {
         <!-- Buyer -->
         <div class="detail-section">
           <h2 class="section-title">Acheteur</h2>
-          <template v-if="contract.parties && contract.parties.length > 0">
+          <template v-if="contract.customer">
             <div class="related-items">
               <RouterLink
-                v-for="(party, i) in contract.parties"
-                :key="i"
-                :to="`/clients/${party.customerId}`"
+                :to="`/clients/${contract.customer.id}`"
                 class="related-item"
               >
                 <User class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
-                  <div style="font-weight:600">{{ party.customer?.name || '—' }}</div>
-                  <div v-if="party.customer?.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    <Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ party.customer.phone }}
+                  <div style="font-weight:600">{{ contract.customer.name || '—' }}</div>
+                  <div v-if="contract.customer.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                    <Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ contract.customer.phone }}
                   </div>
                 </div>
               </RouterLink>
@@ -108,30 +106,32 @@ function formatDate(dateStr: string | null | undefined): string {
           </div>
         </div>
 
-        <!-- Terrain -->
+        <!-- Parcels -->
         <div class="detail-section">
-          <h2 class="section-title">Terrain vendu</h2>
-          <template v-if="contract.terrains && contract.terrains.length > 0">
+          <h2 class="section-title">Parcelles vendues</h2>
+          <template v-if="contract.parcels && contract.parcels.length > 0">
             <div class="related-items">
-              <RouterLink
-                v-for="(ct, i) in contract.terrains"
-                :key="i"
-                :to="`/terrains/${ct.terrainId}`"
+              <div
+                v-for="parcel in contract.parcels"
+                :key="parcel.id"
                 class="related-item"
               >
                 <LandPlot class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
-                  <div style="font-weight:600">{{ ct.terrain?.name || '—' }}</div>
-                  <div v-if="ct.terrain?.address" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    {{ ct.terrain.address }}
+                  <div style="font-weight:600">{{ parcel.label || '—' }}</div>
+                  <div v-if="parcel.terrain" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                    Terrain: {{ parcel.terrain.name }}
+                  </div>
+                  <div v-if="parcel.areaSqm" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                    Surface: {{ parcel.areaSqm.toFixed(2) }} m²
                   </div>
                 </div>
-              </RouterLink>
+              </div>
             </div>
           </template>
           <div v-else class="related-items-empty">
             <LandPlot class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
-            <p>Aucun terrain lié</p>
+            <p>Aucune parcelle liée</p>
           </div>
         </div>
 

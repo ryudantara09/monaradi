@@ -122,12 +122,6 @@ function formatArea(terrain: Terrain): string {
                 <div class="text-sm text-muted-foreground mt-1">{{ terrain.address || 'Pas d\'adresse' }}</div>
              </div>
           </div>
-          <span
-            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-            :class="(terrain._count?.contracts || 0) > 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'"
-          >
-            {{ (terrain._count?.contracts || 0) > 0 ? 'Vendu' : 'Non vendu' }}
-          </span>
         </div>
 
         <div class="flex gap-4 text-sm text-muted-foreground">

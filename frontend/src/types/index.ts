@@ -7,13 +7,15 @@ export interface Parcel {
     label: string;
     ownerName: string | null;
     status: ParcelStatus;
-    // paymentStatus has been removed from backend
     areaSqm: number;
     pricePerSqm: number;
     totalPrice: number; // Auto-calculated: areaSqm * pricePerSqm
+    amountPaid: number;
+    paymentStatus: PaymentStatus;
     projectId?: string;
     terrainId?: string;
     customerId?: string;
+    contractId?: string;
 }
 
 export interface Project {
@@ -101,19 +103,18 @@ export interface Customer {
 export interface Contract {
     id: string;
     contractNumber?: string | null;
-    type: 'ownership' | 'sale' | 'purchase' | 'lease' | 'other';
-    status: 'draft' | 'active' | 'expired' | 'cancelled';
-    startDate?: string | null;
-    endDate?: string | null;
     terms?: string | null;
     notes?: string | null;
+    saleAmount?: number | null;
     createdAt: string;
     updatedAt: string;
-    parties?: ContractPartyWithCustomer[];
-    terrains?: ContractTerrainWithTerrain[];
+    customerId: string;
+    customer?: Customer;
+    parcels?: Parcel[];
+    documents?: any[];
     _count?: {
         documents: number;
-        transactions: number;
+        parcels: number;
     };
 }
 

@@ -23,6 +23,10 @@ model Parcel {
   pricePerSqm Float
   totalPrice  Float
 
+  // Payment tracking
+  amountPaid    Float   @default(0)
+  paymentStatus String  @default("UNPAID") // UNPAID, PARTIAL, PAID
+
   // Relations
   terrainId String?
   terrain   Terrain? @relation(fields: [terrainId], references: [id], onDelete: Cascade)

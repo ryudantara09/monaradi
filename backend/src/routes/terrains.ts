@@ -11,7 +11,10 @@ router.get('/', async (req, res) => {
             orderBy: { createdAt: 'desc' },
             include: {
                 parcels: {
-                    include: { customer: true },
+                    include: {
+                        customer: true,
+                        contract: true
+                    },
                 },
                 _count: {
                     select: {
@@ -21,7 +24,23 @@ router.get('/', async (req, res) => {
             },
         });
 
-        res.json(terrains);
+        // Add contract count to each terrain
+        const terrainsWithContractCount = terrains.map(terrain => {
+            const contractIds = new Set(
+                terrain.parcels
+                    .filter(p => p.contractId)
+                    .map(p => p.contractId)
+            );
+            return {
+                ...terrain,
+                _count: {
+                    ...terrain._count,
+                    contracts: contractIds.size
+                }
+            };
+        });
+
+        res.json(terrainsWithContractCount);
     } catch (error) {
         console.error('Error fetching terrains:', error);
         res.status(500).json({ error: 'Failed to fetch terrains' });
@@ -38,7 +57,10 @@ router.get('/:id', async (req, res) => {
             where: { id },
             include: {
                 parcels: {
-                    include: { customer: true },
+                    include: {
+                        customer: true,
+                        contract: true
+                    },
                 },
                 documents: {
                     include: { document: true },

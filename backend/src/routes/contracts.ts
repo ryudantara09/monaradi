@@ -11,7 +11,11 @@ router.get('/', async (req, res) => {
             orderBy: { createdAt: 'desc' },
             include: {
                 customer: true,
-                parcels: true,
+                parcels: {
+                    include: {
+                        terrain: true
+                    }
+                },
                 _count: {
                     select: {
                         documents: true,
@@ -90,17 +94,22 @@ router.post('/', async (req, res) => {
             },
             include: {
                 customer: true,
-                parcels: true,
+                parcels: {
+                    include: {
+                        terrain: true
+                    }
+                },
             },
         });
 
-        // Update parcels status to SOLD if linked
+        // Update parcels status to SOLD and link contractId
         if (parcelIds && parcelIds.length > 0) {
             await prisma.parcel.updateMany({
                 where: { id: { in: parcelIds } },
                 data: {
                     status: 'SOLD',
-                    customerId: customerId
+                    customerId: customerId,
+                    contractId: contract.id
                 }
             });
         }
@@ -128,7 +137,11 @@ router.put('/:id', async (req, res) => {
             },
             include: {
                 customer: true,
-                parcels: true
+                parcels: {
+                    include: {
+                        terrain: true
+                    }
+                }
             }
         });
 
@@ -152,16 +165,13 @@ router.delete('/:id', async (req, res) => {
         });
 
         if (contract) {
-            // Unlink parcels and set back to AVAILABLE (optional logic, but safer)
-            // Or just keep them sold but without contract linkage? 
-            // Better to keep them sold but unlink contract.
-            // Actually, we should probably reset them to AVAILABLE if the SALE contract is deleted?
-            // Let's just unlink for now to avoid data loss.
+            // Reset parcels to AVAILABLE and unlink contract
             await prisma.parcel.updateMany({
                 where: { contractId: id },
                 data: {
                     status: 'AVAILABLE',
-                    customerId: null // Remove ownership as well since contract is void
+                    customerId: null,
+                    contractId: null
                 }
             });
 
