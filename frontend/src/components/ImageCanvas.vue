@@ -516,7 +516,7 @@ const showCloseIndicator = computed(() => {
       }"
     >
       <template v-if="mode === 'calibrate'">
-        {{ !calibrationStart ? '📍 Click to set start point' : '📍 Click to set end point' }}
+        {{ !calibrationStart ? 'Click to set start point' : 'Click to set end point' }}
       </template>
       <template v-else-if="mode === 'draw'">
         {{ showCloseIndicator ? '✓ Click to close polygon' : (drawingPoints.length >= 3 ? 'Right-click to undo • Click near first point to close' : 'Right-click to undo • Click to add points') }}

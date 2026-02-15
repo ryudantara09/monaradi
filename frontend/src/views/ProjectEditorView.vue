@@ -8,6 +8,7 @@ import ImageCanvas from '@/components/ImageCanvas.vue';
 import CalibrationTool from '@/components/CalibrationTool.vue';
 import ParcelTable from '@/components/ParcelTable.vue';
 import ParcelSidePanel from '@/components/ParcelSidePanel.vue';
+import { Square, Ruler, Pencil, Bot, Loader2, Trash2, CheckCircle2, Lock, AlertCircle } from '@/lib/icons';
 
 const route = useRoute();
 const parcelsStore = useParcelsStore();
@@ -143,7 +144,7 @@ const soldCount = computed(() => parcelsStore.parcels.filter(p => p.status === '
       <div class="page-header-left">
         <RouterLink to="/projets" class="back-link">← Retour aux Projets</RouterLink>
         <h1 class="page-title">
-          <span>📐</span>
+          <span><Square class="h-5 w-5 inline" :stroke-width="1.5" /></span>
           {{ isNew ? 'Nouveau Projet' : 'Éditeur de Projet' }}
         </h1>
         <p class="page-subtitle">
@@ -156,27 +157,29 @@ const soldCount = computed(() => parcelsStore.parcels.filter(p => p.status === '
           :class="{ active: mode === 'calibrate' }"
           @click="startCalibration"
         >
-          📏 Calibrer
+          <Ruler class="h-3.5 w-3.5" :stroke-width="1.5" /> Calibrer
         </button>
         <button
           class="btn btn-secondary"
           :class="{ active: mode === 'draw' }"
           @click="startDrawing"
         >
-          ✏️ Dessiner
+          <Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /> Dessiner
         </button>
         <button
           class="btn btn-accent"
           :disabled="isDetecting"
           @click="detectBoundaries"
         >
-          {{ isDetecting ? '🔄 Détection...' : '🤖 Auto-Détecter' }}
+          <Loader2 v-if="isDetecting" class="h-3.5 w-3.5 animate-spin" :stroke-width="1.5" />
+          <Bot v-else class="h-3.5 w-3.5" :stroke-width="1.5" />
+          {{ isDetecting ? 'Détection...' : 'Auto-Détecter' }}
         </button>
         <button
           class="btn btn-danger"
           @click="clearAll"
         >
-          🗑️ Effacer
+          <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Effacer
         </button>
       </div>
     </header>
@@ -213,21 +216,21 @@ const soldCount = computed(() => parcelsStore.parcels.filter(p => p.status === '
           <!-- Stats Bar -->
           <div class="stats-grid" style="margin-top:var(--space-md)">
             <div class="stat-card">
-              <div class="stat-icon terrain">📐</div>
+              <div class="stat-icon terrain"><Square class="h-4 w-4" :stroke-width="1.5" /></div>
               <div class="stat-content">
                 <span class="stat-value">{{ totalParcels }}</span>
                 <span class="stat-label">Parcelles</span>
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981">✅</div>
+              <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><CheckCircle2 class="h-4 w-4" :stroke-width="1.5" /></div>
               <div class="stat-content">
                 <span class="stat-value">{{ availableCount }}</span>
                 <span class="stat-label">Disponibles</span>
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444">🔒</div>
+              <div class="stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><Lock class="h-4 w-4" :stroke-width="1.5" /></div>
               <div class="stat-content">
                 <span class="stat-value">{{ soldCount }}</span>
                 <span class="stat-label">Vendues</span>
@@ -235,7 +238,7 @@ const soldCount = computed(() => parcelsStore.parcels.filter(p => p.status === '
             </div>
             <div class="stat-card">
               <div class="stat-icon" :style="{ background: calibrationStore.isCalibrated ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: calibrationStore.isCalibrated ? '#10b981' : '#f59e0b' }">
-                {{ calibrationStore.isCalibrated ? '✅' : '⚠️' }}
+                <CheckCircle2 v-if="calibrationStore.isCalibrated" class="h-4 w-4" :stroke-width="1.5" /><AlertCircle v-else class="h-4 w-4" :stroke-width="1.5" />
               </div>
               <div class="stat-content">
                 <span class="stat-value">

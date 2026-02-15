@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchCustomers } from '@/services/api';
 import type { Customer } from '@/types';
+import { Search, User, Mail, Phone, Users, Plus } from '@/lib/icons';
 
 const customers = ref<Customer[]>([]);
 const searchQuery = ref('');
@@ -38,7 +39,8 @@ const filteredCustomers = computed(() => {
       </div>
       <div class="page-actions">
         <RouterLink to="/clients/nouveau" class="btn btn-primary">
-          + Ajouter Client
+          <Plus class="h-4 w-4" :stroke-width="1.5" />
+          Ajouter Client
         </RouterLink>
       </div>
     </header>
@@ -46,7 +48,7 @@ const filteredCustomers = computed(() => {
     <!-- Toolbar -->
     <div class="page-toolbar">
       <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon h-4 w-4" :stroke-width="1.5" />
         <input
           type="text"
           class="input search-input"
@@ -71,13 +73,14 @@ const filteredCustomers = computed(() => {
 
     <!-- Empty State -->
     <div v-else-if="filteredCustomers.length === 0" class="empty-state">
-      <span class="empty-state-icon">👥</span>
+      <Users class="h-12 w-12 mb-4 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucun client</h2>
       <p class="empty-state-text">
         Ajoutez des particuliers ou des entités juridiques pour gérer vos relations clients.
       </p>
       <RouterLink to="/clients/nouveau" class="btn btn-primary btn-lg">
-        + Ajouter Premier Client
+        <Plus class="h-4 w-4" :stroke-width="1.5" />
+        Ajouter Premier Client
       </RouterLink>
     </div>
 
@@ -90,7 +93,9 @@ const filteredCustomers = computed(() => {
         class="entity-card"
       >
         <div class="entity-card-header">
-          <div class="entity-card-avatar">👤</div>
+          <div class="entity-card-avatar">
+            <User class="h-5 w-5 text-muted-foreground" :stroke-width="1.5" />
+          </div>
           <div class="entity-card-info">
             <div class="entity-card-name">{{ customer.name }}</div>
             <div class="entity-card-sub" v-if="customer.idNumber">
@@ -99,8 +104,14 @@ const filteredCustomers = computed(() => {
           </div>
         </div>
         <div class="entity-card-meta">
-          <span v-if="customer.email" class="entity-card-meta-item">📧 {{ customer.email }}</span>
-          <span v-if="customer.phone" class="entity-card-meta-item">📞 {{ customer.phone }}</span>
+          <span v-if="customer.email" class="entity-card-meta-item flex items-center gap-1">
+            <Mail class="h-3.5 w-3.5" :stroke-width="1.5" />
+            {{ customer.email }}
+          </span>
+          <span v-if="customer.phone" class="entity-card-meta-item flex items-center gap-1">
+            <Phone class="h-3.5 w-3.5" :stroke-width="1.5" />
+            {{ customer.phone }}
+          </span>
         </div>
         <div class="entity-card-stats">
           <div class="mini-stat">

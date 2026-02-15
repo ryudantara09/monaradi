@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchContracts } from '@/services/api';
 import type { Contract } from '@/types';
+import { Search, FileText, LandPlot, Plus } from '@/lib/icons';
 
 const contracts = ref<Contract[]>([]);
 const searchQuery = ref('');
@@ -32,8 +33,6 @@ function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('fr-FR');
 }
-
-
 </script>
 
 <template>
@@ -45,7 +44,8 @@ function formatDate(dateStr: string | null | undefined): string {
       </div>
       <div class="page-actions">
         <RouterLink to="/contrats/nouveau" class="btn btn-primary">
-          + Nouvelle Vente
+          <Plus class="h-4 w-4" :stroke-width="1.5" />
+          Nouvelle Vente
         </RouterLink>
       </div>
     </header>
@@ -53,7 +53,7 @@ function formatDate(dateStr: string | null | undefined): string {
     <!-- Search -->
     <div class="page-toolbar">
       <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon h-4 w-4" :stroke-width="1.5" />
         <input
           type="text"
           class="input search-input"
@@ -71,11 +71,12 @@ function formatDate(dateStr: string | null | undefined): string {
 
     <!-- Empty State -->
     <div v-else-if="filteredContracts.length === 0" class="empty-state">
-      <span class="empty-state-icon">📜</span>
+      <FileText class="h-12 w-12 mb-4 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucun contrat de vente</h2>
       <p class="empty-state-text">Enregistrez votre première vente de terrain.</p>
       <RouterLink to="/contrats/nouveau" class="btn btn-primary btn-lg">
-        + Enregistrer une Vente
+        <Plus class="h-4 w-4" :stroke-width="1.5" />
+        Enregistrer une Vente
       </RouterLink>
     </div>
 
@@ -93,7 +94,7 @@ function formatDate(dateStr: string | null | undefined): string {
         <tbody>
           <tr v-for="contract in filteredContracts" :key="contract.id">
             <td>
-              <RouterLink :to="`/contrats/${contract.id}`" class="table-link">
+              <RouterLink :to="`/contrats/${contract.id}`" class="table-link" style="font-weight: 600">
                 {{ contract.contractNumber || `#${contract.id.slice(0, 8)}` }}
               </RouterLink>
             </td>
@@ -103,15 +104,16 @@ function formatDate(dateStr: string | null | undefined): string {
                   {{ party.customer?.name || '—' }}{{ i < contract.parties.length - 1 ? ', ' : '' }}
                 </span>
               </template>
-              <span v-else style="color:var(--color-text-muted)">—</span>
+              <span v-else class="text-muted-foreground">—</span>
             </td>
             <td>
               <template v-if="contract.terrains?.length">
-                <span v-for="(ct, i) in contract.terrains" :key="i">
-                  🗺️ {{ ct.terrain?.name || '—' }}{{ i < contract.terrains.length - 1 ? ', ' : '' }}
+                <span v-for="(ct, i) in contract.terrains" :key="i" class="inline-flex items-center gap-1">
+                  <LandPlot class="h-3.5 w-3.5 text-muted-foreground" :stroke-width="1.5" />
+                  {{ ct.terrain?.name || '—' }}{{ i < contract.terrains.length - 1 ? ', ' : '' }}
                 </span>
               </template>
-              <span v-else style="color:var(--color-text-muted)">—</span>
+              <span v-else class="text-muted-foreground">—</span>
             </td>
             <td>{{ formatDate(contract.startDate) }}</td>
           </tr>

@@ -8,6 +8,7 @@ import ImageCanvas from '@/components/ImageCanvas.vue';
 import CalibrationTool from '@/components/CalibrationTool.vue';
 import ParcelSidePanel from '@/components/ParcelSidePanel.vue';
 import { fetchTerrain, fetchDocuments, linkDocument, createParcel, updateParcel, deleteParcel, uploadDocument } from '@/services/api';
+import { Save, FolderOpen, Image, File, Ruler, Pencil, Bot, Loader2 } from '@/lib/icons';
 
 const props = defineProps<{ embedded?: boolean }>();
 
@@ -239,25 +240,25 @@ const hasImage = computed(() => !!imageDataUrl.value);
        </div>
        <div class="actions">
           <button class="btn btn-primary" @click="saveAll" :disabled="saving">
-            {{ saving ? 'Enregistrement...' : '💾 Enregistrer Tout' }}
+            <Save class="h-3.5 w-3.5" :stroke-width="1.5" /> {{ saving ? 'Enregistrement...' : 'Enregistrer Tout' }}
           </button>
        </div>
     </header>
     <div v-else class="embedded-controls" style="padding: var(--space-md); border-bottom: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
           <button class="btn btn-primary" @click="saveAll" :disabled="saving">
-            {{ saving ? 'Enregistrement...' : '💾 Enregistrer Tout' }}
+            <Save class="h-3.5 w-3.5" :stroke-width="1.5" /> {{ saving ? 'Enregistrement...' : 'Enregistrer Tout' }}
           </button>
     </div>
 
     <div class="editor-body">
       <aside class="sidebar-docs" v-if="!hasImage || unlinkedDocs.length > 0">
-        <h3>📂 Documents en attente (Drive)</h3>
+        <h3><FolderOpen class="h-4 w-4 inline" :stroke-width="1.5" /> Documents en attente (Drive)</h3>
         <p class="sidebar-hint" v-if="!hasImage">
           Sélectionnez une image pour commencer
         </p>
         <div class="docs-list">
           <div v-for="doc in unlinkedDocs" :key="doc.id" class="doc-card">
-            <div class="doc-icon">{{ doc.mimeType?.startsWith('image/') ? '🖼️' : '📄' }}</div>
+            <div class="doc-icon"><component :is="doc.mimeType?.startsWith('image/') ? Image : File" class="h-4 w-4" :stroke-width="1.5" /></div>
             <div class="doc-info">
               <div class="doc-name">{{ doc.name }}</div>
               <div class="doc-meta">{{ (doc.sizeBytes / 1024).toFixed(0) }} KB</div>
@@ -275,10 +276,10 @@ const hasImage = computed(() => !!imageDataUrl.value);
       <main class="editor-main">
         <template v-if="hasImage">
           <div class="toolbar">
-             <button class="btn btn-secondary" :class="{ active: mode === 'calibrate' }" @click="startCalibration">📏 Calibrer</button>
-             <button class="btn btn-secondary" :class="{ active: mode === 'draw' }" @click="startDrawing">✏️ Dessiner</button>
+             <button class="btn btn-secondary" :class="{ active: mode === 'calibrate' }" @click="startCalibration"><Ruler class="h-3.5 w-3.5" :stroke-width="1.5" /> Calibrer</button>
+             <button class="btn btn-secondary" :class="{ active: mode === 'draw' }" @click="startDrawing"><Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /> Dessiner</button>
              <button class="btn btn-accent" :disabled="isDetecting" @click="detectBoundaries">
-               {{ isDetecting ? '🔄...' : '🤖 Auto-Détecter' }}
+               <Loader2 v-if="isDetecting" class="h-3.5 w-3.5 animate-spin" :stroke-width="1.5" /> <Bot v-else class="h-3.5 w-3.5" :stroke-width="1.5" /> {{ isDetecting ? 'Détection...' : 'Auto-Détecter' }}
              </button>
           </div>
           

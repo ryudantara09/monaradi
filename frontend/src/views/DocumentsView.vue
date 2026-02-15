@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchDocuments, updateDocument, deleteDocument } from '@/services/api';
+import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Eye } from '@/lib/icons';
 
 const documents = ref<any[]>([]);
 const searchQuery = ref('');
@@ -28,7 +29,6 @@ onMounted(async () => {
 async function loadDocuments() {
   loading.value = true;
   try {
-    // We fetch all and filter locally for now
     documents.value = await fetchDocuments();
   } catch (err) {
     console.error('Erreur chargement documents:', err);
@@ -39,28 +39,20 @@ async function loadDocuments() {
 
 const filteredDocuments = computed(() => {
   let docs = documents.value;
-  
-  // Filter by type
+
   if (selectedType.value !== 'ALL') {
     docs = docs.filter(d => d.type === selectedType.value);
   }
 
-  // Filter by search
   const q = searchQuery.value.toLowerCase();
   if (q) {
-    docs = docs.filter(d => 
+    docs = docs.filter(d =>
       d.name.toLowerCase().includes(q) ||
       d.type?.toLowerCase().includes(q)
     );
   }
   return docs;
 });
-
-function getFileIcon(mimeType: string): string {
-  if (mimeType?.startsWith('image/')) return '🖼️';
-  if (mimeType?.includes('pdf')) return '📕';
-  return '📄';
-}
 
 function formatSize(bytes: number): string {
   if (!bytes) return '0 B';
@@ -76,28 +68,28 @@ function formatDate(dateStr: string): string {
 
 function getLinkedEntities(doc: any) {
   const links: any[] = [];
-  
+
   if (doc.terrains?.length) {
     doc.terrains.forEach((t: any) => {
-      if (t.terrain) links.push({ id: `t-${t.terrain.id}`, to: `/terrains/${t.terrain.id}`, name: t.terrain.name, icon: '🗺️' });
+      if (t.terrain) links.push({ id: `t-${t.terrain.id}`, to: `/terrains/${t.terrain.id}`, name: t.terrain.name, type: 'terrain' });
     });
   }
   if (doc.customers?.length) {
     doc.customers.forEach((c: any) => {
-      if (c.customer) links.push({ id: `c-${c.customer.id}`, to: `/clients/${c.customer.id}`, name: c.customer.name, icon: '👤' });
+      if (c.customer) links.push({ id: `c-${c.customer.id}`, to: `/clients/${c.customer.id}`, name: c.customer.name, type: 'customer' });
     });
   }
   if (doc.contracts?.length) {
     doc.contracts.forEach((c: any) => {
-      if (c.contract) links.push({ id: `ct-${c.contract.id}`, to: `/contrats/${c.contract.id}`, name: c.contract.contractNumber || 'Contrat', icon: '📜' });
+      if (c.contract) links.push({ id: `ct-${c.contract.id}`, to: `/contrats/${c.contract.id}`, name: c.contract.contractNumber || 'Contrat', type: 'contract' });
     });
   }
   if (doc.parcels?.length) {
     doc.parcels.forEach((p: any) => {
-      if (p.parcel) links.push({ id: `p-${p.parcel.id}`, to: `/terrains/${p.parcel.terrainId}`, name: p.parcel.label, icon: '📐' });
+      if (p.parcel) links.push({ id: `p-${p.parcel.id}`, to: `/terrains/${p.parcel.terrainId}`, name: p.parcel.label, type: 'parcel' });
     });
   }
-  
+
   return links;
 }
 
@@ -155,7 +147,7 @@ async function deleteDoc(doc: any) {
     <!-- Toolbar -->
     <div class="page-toolbar">
       <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
+        <Search class="search-icon h-4 w-4" :stroke-width="1.5" />
         <input
           type="text"
           class="input search-input"
@@ -163,8 +155,8 @@ async function deleteDoc(doc: any) {
           v-model="searchQuery"
         />
       </div>
-      
-      <div class="toolbar-actions" style="gap: var(--space-sm); overflow-x: auto;">
+
+      <div class="toolbar-actions" style="gap: 0.5rem; overflow-x: auto;">
         <button
           v-for="type in documentTypes"
           :key="type.value"
@@ -185,7 +177,7 @@ async function deleteDoc(doc: any) {
 
     <!-- Empty State -->
     <div v-else-if="filteredDocuments.length === 0" class="empty-state">
-      <span class="empty-state-icon">📂</span>
+      <FolderOpen class="h-12 w-12 mb-4 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucun document trouvé</h2>
       <p class="empty-state-text">Essayez de modifier vos filtres.</p>
     </div>
@@ -198,34 +190,43 @@ async function deleteDoc(doc: any) {
         class="document-card"
       >
         <div class="document-preview">
-            <span class="document-icon">{{ getFileIcon(doc.mimeType) }}</span>
+          <File class="h-10 w-10 text-muted-foreground" :stroke-width="1.5" />
         </div>
-        
+
         <div class="document-info">
             <h3 class="document-name" :title="doc.name">{{ doc.name }}</h3>
             <div class="document-meta">
                 <span>{{ doc.type || 'Autre' }}</span>
-                <span>•</span>
+                <span>-</span>
                 <span>{{ formatSize(doc.sizeBytes) }}</span>
             </div>
              <div class="document-date">
                 Ajouté le {{ formatDate(doc.createdAt) }}
             </div>
-            
+
              <!-- Linked Entities -->
             <div class="document-links" v-if="getLinkedEntities(doc).length > 0">
               <div v-for="link in getLinkedEntities(doc)" :key="link.id" class="document-link-item">
                 <RouterLink :to="link.to" class="link-tag" :title="link.name">
-                  {{ link.icon }} {{ link.name }}
+                  <component
+                    :is="link.type === 'terrain' ? LandPlot : link.type === 'customer' ? User : link.type === 'contract' ? FileText : Square"
+                    class="h-3 w-3"
+                    :stroke-width="1.5"
+                  />
+                  {{ link.name }}
                 </RouterLink>
               </div>
             </div>
         </div>
-        
+
         <div class="document-actions">
              <div style="display:flex; gap:0.5rem; margin-bottom: 0.5rem;">
-                <button class="btn btn-secondary btn-sm" @click="openEdit(doc)" title="Modifier">✏️</button>
-                <button class="btn btn-danger btn-sm" @click="deleteDoc(doc)" title="Supprimer">🗑️</button>
+                <button class="btn btn-secondary btn-sm" @click="openEdit(doc)" title="Modifier">
+                  <Pencil class="h-3.5 w-3.5" :stroke-width="1.5" />
+                </button>
+                <button class="btn btn-danger btn-sm" @click="deleteDoc(doc)" title="Supprimer">
+                  <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" />
+                </button>
              </div>
              <a
                   v-if="doc.googleDriveId"
@@ -234,22 +235,23 @@ async function deleteDoc(doc: any) {
                   class="btn btn-secondary btn-sm"
                   style="width: 100%; justify-content: center;"
                 >
-                  Ouvrir ↗
+                  <Eye class="h-3.5 w-3.5" :stroke-width="1.5" />
+                  Ouvrir
             </a>
-            <span v-else style="font-size: 0.8em; color: var(--color-text-muted); text-align: center; display: block;">
+            <span v-else style="font-size: 0.8em; color: var(--muted-foreground); text-align: center; display: block;">
                 Local File
             </span>
         </div>
       </div>
     </div>
-    
+
     <!-- EDIT MODAL -->
     <Teleport to="body">
       <div v-if="editingDocumentId" class="modal-overlay" @click.self="closeEdit">
         <div class="modal-container">
           <div class="modal-header">
             <h2 class="modal-title">Modifier Document</h2>
-            <button class="modal-close" @click="closeEdit">✕</button>
+            <button class="modal-close" @click="closeEdit">x</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
@@ -281,9 +283,9 @@ async function deleteDoc(doc: any) {
 
 <style scoped>
 .filter-chip {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
   padding: 0.5rem 1rem;
   border-radius: 999px;
   font-size: 0.875rem;
@@ -293,27 +295,26 @@ async function deleteDoc(doc: any) {
 }
 
 .filter-chip:hover {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
+  background: var(--muted);
+  color: var(--foreground);
 }
 
 .filter-chip.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .documents-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-md);
-  padding: var(--space-md);
+  gap: 1rem;
 }
 
 .document-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
@@ -322,25 +323,21 @@ async function deleteDoc(doc: any) {
 
 .document-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  border-color: var(--color-primary);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border-color: var(--primary);
 }
 
 .document-preview {
   height: 120px;
-  background: var(--color-bg-tertiary);
+  background: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.document-icon {
-  font-size: 3rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .document-info {
-  padding: var(--space-md);
+  padding: 1rem;
   flex: 1;
 }
 
@@ -357,19 +354,19 @@ async function deleteDoc(doc: any) {
   display: flex;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: var(--muted-foreground);
   margin-bottom: 0.5rem;
 }
 
 .document-date {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--muted-foreground);
 }
 
 .document-actions {
-  padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--muted);
 }
 
 .document-links {
@@ -384,8 +381,8 @@ async function deleteDoc(doc: any) {
   align-items: center;
   gap: 0.25rem;
   padding: 0.125rem 0.375rem;
-  background: rgba(var(--color-primary-rgb), 0.1);
-  color: var(--color-primary);
+  background: color-mix(in oklch, var(--primary), transparent 90%);
+  color: var(--primary);
   border-radius: 4px;
   font-size: 0.75rem;
   text-decoration: none;
@@ -396,7 +393,7 @@ async function deleteDoc(doc: any) {
 }
 
 .link-tag:hover {
-  background: rgba(var(--color-primary-rgb), 0.2);
+  background: color-mix(in oklch, var(--primary), transparent 80%);
   text-decoration: underline;
 }
 
@@ -414,12 +411,12 @@ async function deleteDoc(doc: any) {
 }
 
 .modal-container {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.2s ease;
 }
 
@@ -428,7 +425,7 @@ async function deleteDoc(doc: any) {
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-title {
@@ -440,7 +437,7 @@ async function deleteDoc(doc: any) {
 .modal-close {
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: var(--muted-foreground);
   font-size: 1.25rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -455,7 +452,7 @@ async function deleteDoc(doc: any) {
 
 .modal-footer {
   padding: 1.5rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;

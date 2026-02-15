@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useParcelsStore } from '@/stores/parcels';
 import { useCalibrationStore } from '@/stores/calibration';
 import type { ParcelStatus, PaymentStatus } from '@/types';
+import { Save, Trash2 } from '@/lib/icons';
 
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -87,11 +88,12 @@ const statusOptions: { value: ParcelStatus; label: string; color: string }[] = [
   { value: 'SOLD', label: 'Vendue', color: 'bg-sold' },
 ];
 
-const paymentOptions: { value: PaymentStatus; label: string }[] = [
+const _paymentOptions: { value: PaymentStatus; label: string }[] = [
   { value: 'UNPAID', label: 'Non payé' },
   { value: 'PARTIAL', label: 'Partiel' },
   { value: 'PAID', label: 'Payé' },
 ];
+void _paymentOptions;
 </script>
 
 <template>
@@ -233,7 +235,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
           :disabled="!hasChanges"
           @click="handleSave"
         >
-          {{ hasChanges ? '💾 Enregistrer' : 'Pas de modifications' }}
+          <Save v-if="hasChanges" class="h-3.5 w-3.5" :stroke-width="1.5" /> {{ hasChanges ? 'Enregistrer' : 'Pas de modifications' }}
         </button>
         
         <!-- Delete Button -->
@@ -241,7 +243,7 @@ const paymentOptions: { value: PaymentStatus; label: string }[] = [
           class="w-full px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg font-medium transition-colors"
           @click="handleDelete"
         >
-          🗑️ Supprimer la Parcelle
+          <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer la Parcelle
         </button>
       </div>
     </div>

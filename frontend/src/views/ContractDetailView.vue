@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchContract, deleteContract } from '@/services/api';
+import { FileText, Trash2, Hash, Calendar, User, Phone, Users, LandPlot, Image, File, XCircle } from '@/lib/icons';
 
 const route = useRoute();
 const router = useRouter();
@@ -52,7 +53,7 @@ function formatDate(dateStr: string | null | undefined): string {
         <div class="page-header-left">
           <RouterLink to="/contrats" class="back-link">← Retour aux Contrats</RouterLink>
           <h1 class="page-title">
-            <span>📜</span>
+            <FileText class="h-5 w-5 inline" :stroke-width="1.5" />
             Contrat de Vente {{ contract.contractNumber || '' }}
           </h1>
           <p class="page-subtitle">
@@ -60,7 +61,7 @@ function formatDate(dateStr: string | null | undefined): string {
           </p>
         </div>
         <div class="page-actions">
-          <button class="btn btn-danger" @click="handleDelete">🗑️ Supprimer</button>
+          <button class="btn btn-danger" @click="handleDelete"><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer</button>
         </div>
       </header>
 
@@ -70,11 +71,11 @@ function formatDate(dateStr: string | null | undefined): string {
           <h2 class="section-title">Détails de la vente</h2>
           <div class="info-grid">
             <div class="info-item">
-              <span class="info-label">🔢 N° contrat</span>
+              <span class="info-label"><Hash class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> N° contrat</span>
               <span class="info-value">{{ contract.contractNumber || '—' }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">📅 Date de vente</span>
+              <span class="info-label"><Calendar class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Date de vente</span>
               <span class="info-value">{{ formatDate(contract.startDate) }}</span>
             </div>
           </div>
@@ -91,18 +92,18 @@ function formatDate(dateStr: string | null | undefined): string {
                 :to="`/clients/${party.customerId}`"
                 class="related-item"
               >
-                <span>👤</span>
+                <User class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">{{ party.customer?.name || '—' }}</div>
                   <div v-if="party.customer?.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    📞 {{ party.customer.phone }}
+                    <Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ party.customer.phone }}
                   </div>
                 </div>
               </RouterLink>
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>👥</span>
+            <Users class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun acheteur lié</p>
           </div>
         </div>
@@ -118,7 +119,7 @@ function formatDate(dateStr: string | null | undefined): string {
                 :to="`/terrains/${ct.terrainId}`"
                 class="related-item"
               >
-                <span>🗺️</span>
+                <LandPlot class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">{{ ct.terrain?.name || '—' }}</div>
                   <div v-if="ct.terrain?.address" style="font-size:0.8125rem;color:var(--color-text-muted)">
@@ -129,7 +130,7 @@ function formatDate(dateStr: string | null | undefined): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>🗺️</span>
+            <LandPlot class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun terrain lié</p>
           </div>
         </div>
@@ -145,7 +146,7 @@ function formatDate(dateStr: string | null | undefined): string {
                 class="related-item"
                 style="cursor:default"
               >
-                <span>{{ cd.document?.mimeType?.startsWith('image/') ? '🖼️' : '📄' }}</span>
+                <component :is="cd.document?.mimeType?.startsWith('image/') ? Image : File" class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">{{ cd.document?.name || 'Document' }}</div>
                   <div style="font-size:0.8125rem;color:var(--color-text-muted)">
@@ -168,7 +169,7 @@ function formatDate(dateStr: string | null | undefined): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📄</span>
+            <File class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun document associé</p>
           </div>
         </div>
@@ -189,7 +190,7 @@ function formatDate(dateStr: string | null | undefined): string {
     </template>
 
     <div v-else class="empty-state">
-      <span class="empty-state-icon">❌</span>
+      <span class="empty-state-icon"><XCircle class="h-12 w-12 text-destructive" :stroke-width="1.5" /></span>
       <p class="empty-state-title">Contrat introuvable</p>
       <RouterLink to="/contrats" class="btn btn-primary">Retour aux Contrats</RouterLink>
     </div>

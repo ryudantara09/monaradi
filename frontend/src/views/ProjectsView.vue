@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
+import { Square } from '@/lib/icons';
 
 interface ProjectItem {
   id: string;
@@ -66,7 +67,7 @@ function formatDate(dateStr: string): string {
 
     <!-- Empty State -->
     <div v-else-if="projects.length === 0" class="empty-state">
-      <span class="empty-state-icon">📐</span>
+      <Square class="h-12 w-12 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucun projet</h2>
       <p class="empty-state-text">
         Importez une image satellite et tracez vos parcelles directement dessus.
@@ -85,7 +86,7 @@ function formatDate(dateStr: string): string {
         class="entity-card"
       >
         <div class="entity-card-header">
-          <div class="entity-card-avatar">📐</div>
+          <div class="entity-card-avatar"><Square class="h-5 w-5 text-muted-foreground" :stroke-width="1.5" /></div>
           <div class="entity-card-info">
             <div class="entity-card-name">{{ project.name }}</div>
             <div class="entity-card-sub">Créé le {{ formatDate(project.createdAt) }}</div>

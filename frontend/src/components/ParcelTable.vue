@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useParcelsStore } from '@/stores/parcels';
 import { useCalibrationStore } from '@/stores/calibration';
+import { AlertCircle } from '@/lib/icons';
 
 const parcelsStore = useParcelsStore();
 const calibrationStore = useCalibrationStore();
@@ -72,7 +73,7 @@ const statusLabels: Record<string, string> = {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-slate-300 font-mono">
               {{ parcel.areaSqm.toFixed(2) }}
-              <span v-if="!calibrationStore.isCalibrated" class="text-amber-500 ml-1" title="Non calibré">⚠️</span>
+              <AlertCircle v-if="!calibrationStore.isCalibrated" class="h-3.5 w-3.5 text-amber-500 ml-1 inline" :stroke-width="1.5" title="Non calibré" />
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right font-medium text-slate-200">
               {{ formatTND(parcel.totalPrice) }}

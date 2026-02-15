@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter, RouterLink } from 'vue-router';
 import { createContract, fetchCustomers, fetchTerrains } from '@/services/api';
+import { Users, Phone, LandPlot } from '@/lib/icons';
 import type { Customer, Terrain } from '@/types';
 
 const router = useRouter();
@@ -135,7 +136,7 @@ function formatTND(value: number): string {
       <div class="form-section">
         <h2 class="form-section-title">Acheteur *</h2>
         <div v-if="customers.length === 0" class="related-items-empty">
-          <span>👥</span>
+          <Users class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
           <p>Aucun client disponible</p>
           <RouterLink to="/clients/nouveau" class="btn btn-secondary btn-sm">+ Ajouter un client</RouterLink>
         </div>
@@ -148,7 +149,7 @@ function formatTND(value: number): string {
           </select>
           <div v-if="selectedCustomer" style="margin-top:var(--space-sm);padding:var(--space-sm) var(--space-md);background:rgba(79,158,255,0.06);border-radius:var(--radius-md);border:1px solid rgba(79,158,255,0.15)">
             <span style="font-weight:600">{{ selectedCustomer.name }}</span>
-            <span v-if="selectedCustomer.phone" style="color:var(--color-text-muted);margin-left:var(--space-md)">📞 {{ selectedCustomer.phone }}</span>
+            <span v-if="selectedCustomer.phone" style="color:var(--color-text-muted);margin-left:var(--space-md)"><Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ selectedCustomer.phone }}</span>
           </div>
         </div>
       </div>
@@ -157,7 +158,7 @@ function formatTND(value: number): string {
       <div class="form-section">
         <h2 class="form-section-title">Parcelles à vendre *</h2>
         <div v-if="terrains.length === 0" class="related-items-empty">
-          <span>🗺️</span>
+          <LandPlot class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
           <p>Aucun terrain disponible</p>
           <RouterLink to="/terrains/nouveau" class="btn btn-secondary btn-sm">+ Ajouter un terrain</RouterLink>
         </div>

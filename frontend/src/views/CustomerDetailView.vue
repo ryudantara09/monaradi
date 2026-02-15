@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchCustomer, updateCustomer, deleteCustomer } from '@/services/api';
 import type { Customer } from '@/types';
+import { User, Building2, Square, DollarSign, LandPlot, Mail, Phone, MapPin, Pencil, Trash2, FileText, XCircle } from '@/lib/icons';
 
 const route = useRoute();
 const router = useRouter();
@@ -125,15 +126,6 @@ function statusColor(status: string): string {
   };
   return colors[status] || '#6b7280';
 }
-
-function paymentLabel(status: string): string {
-  const labels: Record<string, string> = {
-    UNPAID: 'Non payé',
-    PARTIAL: 'Partiel',
-    PAID: 'Payé',
-  };
-  return labels[status] || status;
-}
 </script>
 
 <template>
@@ -148,7 +140,7 @@ function paymentLabel(status: string): string {
         <div class="page-header-left">
           <RouterLink to="/clients" class="back-link">← Retour aux Clients</RouterLink>
           <h1 class="page-title">
-            <span>{{ customer.type === 'individual' ? '👤' : '🏢' }}</span>
+            <component :is="customer.type === 'individual' ? User : Building2" class="h-6 w-6 inline" :stroke-width="1.5" />
             {{ customer.name }}
           </h1>
           <p class="page-subtitle">
@@ -163,8 +155,8 @@ function paymentLabel(status: string): string {
             </button>
           </template>
           <template v-else>
-            <button class="btn btn-secondary" @click="startEdit">✏️ Modifier</button>
-            <button class="btn btn-danger" @click="handleDelete">🗑️ Supprimer</button>
+            <button class="btn btn-secondary" @click="startEdit"><Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /> Modifier</button>
+            <button class="btn btn-danger" @click="handleDelete"><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer</button>
           </template>
         </div>
       </header>
@@ -172,21 +164,21 @@ function paymentLabel(status: string): string {
       <!-- Stats bar -->
       <div class="stats-grid" style="margin-bottom: var(--space-lg)">
         <div class="stat-card">
-          <div class="stat-icon terrain">📐</div>
+          <div class="stat-icon terrain"><Square class="h-5 w-5" :stroke-width="1.5" /></div>
           <div class="stat-content">
             <span class="stat-value">{{ totalParcels }}</span>
             <span class="stat-label">Parcelles achetées</span>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:#6366f1">💰</div>
+          <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:#6366f1"><DollarSign class="h-5 w-5" :stroke-width="1.5" /></div>
           <div class="stat-content">
             <span class="stat-value">{{ formatPrice(totalInvestment) }}</span>
             <span class="stat-label">Investissement total</span>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981">🗺️</div>
+          <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><LandPlot class="h-5 w-5" :stroke-width="1.5" /></div>
           <div class="stat-content">
             <span class="stat-value">{{ parcelsByTerrain.length }}</span>
             <span class="stat-label">Terrains</span>
@@ -223,15 +215,15 @@ function paymentLabel(status: string): string {
           <template v-else>
             <div class="info-grid">
               <div class="info-item">
-                <span class="info-label">📧 Email</span>
+                <span class="info-label"><Mail class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Email</span>
                 <span class="info-value">{{ customer.email || '—' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">📞 Téléphone</span>
+                <span class="info-label"><Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Téléphone</span>
                 <span class="info-value">{{ customer.phone || '—' }}</span>
               </div>
               <div class="info-item full-width">
-                <span class="info-label">📍 Adresse</span>
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Adresse</span>
                 <span class="info-value">{{ customer.address || '—' }}</span>
               </div>
             </div>
@@ -258,7 +250,7 @@ function paymentLabel(status: string): string {
           <template v-else>
             <div class="info-grid">
               <div class="info-item">
-                <span class="info-label">🆔 N° Identité (CIN)</span>
+                <span class="info-label"><FileText class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> N° Identité (CIN)</span>
                 <span class="info-value">
                   {{ customer.idNumber || '—' }}
                 </span>
@@ -276,7 +268,7 @@ function paymentLabel(status: string): string {
             <!-- Group by terrain -->
             <div v-for="group in parcelsByTerrain" :key="group.terrain.id" style="margin-bottom: var(--space-lg);">
               <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
-                <span style="font-size: 1.1rem;">🗺️</span>
+                <LandPlot class="h-4 w-4" :stroke-width="1.5" style="color: var(--muted-foreground)" />
                 <RouterLink
                   v-if="group.terrain.id !== 'unknown'"
                   :to="`/terrains/${group.terrain.id}`"
@@ -327,7 +319,7 @@ function paymentLabel(status: string): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📐</span>
+            <Square class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Ce client n'a acheté aucune parcelle pour le moment</p>
           </div>
         </div>
@@ -343,7 +335,7 @@ function paymentLabel(status: string): string {
                 :to="`/contrats/${cp.contractId}`"
                 class="related-item"
               >
-                <span>📜</span>
+                <FileText class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">
                     Contrat {{ cp.contract?.contractNumber || `#${cp.contractId.slice(0, 8)}` }}
@@ -360,7 +352,7 @@ function paymentLabel(status: string): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📜</span>
+            <FileText class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun contrat associé pour le moment</p>
             <RouterLink to="/contrats/nouveau" class="btn btn-secondary btn-sm">
               + Créer Contrat
@@ -392,7 +384,7 @@ function paymentLabel(status: string): string {
     </template>
 
     <div v-else class="empty-state">
-      <span class="empty-state-icon">❌</span>
+      <span class="empty-state-icon"><XCircle class="h-12 w-12 text-destructive" :stroke-width="1.5" /></span>
       <p class="empty-state-title">Client introuvable</p>
       <RouterLink to="/clients" class="btn btn-primary">Retour aux Clients</RouterLink>
     </div>

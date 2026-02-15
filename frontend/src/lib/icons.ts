@@ -36,6 +36,13 @@ import {
   Home,
   File,
   Folder,
+  Ruler,
+  Save,
+  Image,
+  Hash,
+  Lock,
+  Bot,
+  Loader2,
 } from 'lucide-vue-next'
 
 export {
@@ -76,4 +83,11 @@ export {
   Home,
   File,
   Folder,
+  Ruler,
+  Save,
+  Image,
+  Hash,
+  Lock,
+  Bot,
+  Loader2,
 }

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel } from '@/services/api';
 import TerrainEditorView from '@/views/TerrainEditorView.vue';
+import { LandPlot, Square, User, Building2, Phone, Pencil, Trash2, FileText, MapPin, CheckCircle2, XCircle, AlertCircle, DollarSign, File, Plus } from '@/lib/icons';
 
 const customers = ref<any[]>([]);
 
@@ -244,6 +245,15 @@ function statusColor(status: string): string {
   };
   return colors[status] || '#6b7280';
 }
+
+function paymentLabel(status: string): string {
+  const labels: Record<string, string> = {
+    UNPAID: 'Non payé',
+    PARTIAL: 'Partiel',
+    PAID: 'Payé',
+  };
+  return labels[status] || status;
+}
 </script>
 
 <template>
@@ -259,7 +269,7 @@ function statusColor(status: string): string {
         <div class="page-header-left">
           <RouterLink to="/terrains" class="back-link">← Retour aux Terrains</RouterLink>
           <h1 class="page-title">
-            <span>🗺️</span>
+            <span><LandPlot class="h-4 w-4 inline" :stroke-width="1.5" /></span>
             {{ terrain.name }}
           </h1>
           <p class="page-subtitle">{{ terrain.address || 'Aucune adresse spécifiée' }}</p>
@@ -272,71 +282,32 @@ function statusColor(status: string): string {
             </button>
           </template>
           <template v-else>
-            <button class="btn btn-secondary" @click="startEdit">✏️ Modifier</button>
-            <button class="btn btn-danger" @click="handleDelete">🗑️ Supprimer</button>
+            <button class="btn btn-secondary" @click="startEdit"><Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /> Modifier</button>
+            <button class="btn btn-danger" @click="handleDelete"><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer</button>
           </template>
         </div>
       </header>
 
       <!-- Tabs -->
       <div class="page-tabs" style="margin-bottom:var(--space-lg); border-bottom:1px solid var(--color-border); display:flex; gap:var(--space-md)">
-        <button 
-          class="tab-btn" 
-          :class="{ active: currentTab === 'details' }" 
+        <button
+          class="tab-btn"
+          :class="{ active: currentTab === 'details' }"
           @click="currentTab = 'details'"
         >
-          📝 Détails & Liste
+          Détails & Liste
         </button>
-        <button 
-          class="tab-btn" 
-          :class="{ active: currentTab === 'visual' }" 
+        <button
+          class="tab-btn"
+          :class="{ active: currentTab === 'visual' }"
           @click="currentTab = 'visual'"
         >
-          📐 Plan & Carte
+          Plan & Carte
         </button>
       </div>
 
       <!-- Detail Tab Content -->
       <div v-if="currentTab === 'details'">
-        <!-- Stats Bar -->
-        <div class="stats-grid" style="margin-bottom: var(--space-lg)">
-        <div class="stat-card">
-          <div class="stat-icon terrain">📐</div>
-          <div class="stat-content">
-            <span class="stat-value">{{ totalParcels }}</span>
-            <span class="stat-label">Parcelles</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981">✅</div>
-          <div class="stat-content">
-            <span class="stat-value">{{ availableParcels }}</span>
-            <span class="stat-label">Disponibles</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444">🔒</div>
-          <div class="stat-content">
-            <span class="stat-value">{{ soldParcels }}</span>
-            <span class="stat-label">Vendues</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b">⏳</div>
-          <div class="stat-content">
-            <span class="stat-value">{{ reservedParcels }}</span>
-            <span class="stat-label">Réservées</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:#6366f1">💰</div>
-          <div class="stat-content">
-            <span class="stat-value">{{ formatPrice(totalRevenue) }}</span>
-            <span class="stat-label">Revenus</span>
-          </div>
-        </div>
-      </div>
-
       <div class="detail-content">
         <!-- Basic Info -->
         <div class="detail-section">
@@ -371,50 +342,17 @@ function statusColor(status: string): string {
           <template v-else>
             <div class="info-grid">
               <div class="info-item">
-                <span class="info-label">📐 Surface</span>
+                <span class="info-label"><Square class="h-4 w-4 inline" :stroke-width="1.5" /> Surface</span>
                 <span class="info-value">{{ formatArea(terrain) }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">🗺️ Référence cadastrale</span>
+                <span class="info-label"><LandPlot class="h-4 w-4 inline" :stroke-width="1.5" /> Référence cadastrale</span>
                 <span class="info-value">{{ terrain.mapReference || '—' }}</span>
               </div>
               <div class="info-item full-width">
-                <span class="info-label">📍 Adresse</span>
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Adresse</span>
                 <span class="info-value">{{ terrain.address || '—' }}</span>
               </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Owner -->
-        <div class="detail-section">
-          <h2 class="section-title">Propriétaire du terrain</h2>
-          <template v-if="isEditing">
-            <div class="form-group">
-              <select class="input" v-model="formData.ownerId">
-                <option :value="null">— Aucun propriétaire —</option>
-                <option value="">— Aucun propriétaire —</option>
-                <option v-for="c in customers" :key="c.id" :value="c.id">
-                  {{ c.name }}
-                </option>
-              </select>
-            </div>
-          </template>
-          <template v-else>
-            <div v-if="terrain.owner" class="related-items">
-              <RouterLink :to="`/clients/${terrain.owner.id}`" class="related-item">
-                <span>👤</span>
-                <div style="flex:1">
-                  <div style="font-weight:600">{{ terrain.owner.name }}</div>
-                  <div v-if="terrain.owner.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    📞 {{ terrain.owner.phone }}
-                  </div>
-                </div>
-              </RouterLink>
-            </div>
-            <div v-else class="related-items-empty">
-              <span>👤</span>
-              <p>Aucun propriétaire défini</p>
             </div>
           </template>
         </div>
@@ -479,7 +417,7 @@ function statusColor(status: string): string {
                         class="table-link"
                         style="display: flex; align-items: center; gap: 0.25rem;"
                       >
-                        👤 {{ parcel.customer.name }}
+                        <User class="h-4 w-4 inline" :stroke-width="1.5" /> {{ parcel.customer.name }}
                       </RouterLink>
                       <span v-else-if="parcel.ownerName" style="color:var(--color-text-muted)">
                         {{ parcel.ownerName }}
@@ -492,12 +430,12 @@ function statusColor(status: string): string {
                           class="btn btn-secondary btn-sm"
                           @click="openEditParcel(parcel)"
                           title="Modifier"
-                        >✏️</button>
+                        ><Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /></button>
                         <button
                           class="btn btn-danger btn-sm"
                           @click="handleDeleteParcel(parcel)"
                           title="Supprimer"
-                        >🗑️</button>
+                        ><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /></button>
                       </div>
                     </td>
                   </tr>
@@ -506,7 +444,7 @@ function statusColor(status: string): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📐</span>
+            <span><Square class="h-4 w-4 inline" :stroke-width="1.5" /></span>
             <p>Aucune parcelle définie pour ce terrain</p>
             <button class="btn btn-primary" @click="openAddParcel">+ Ajouter la première parcelle</button>
           </div>
@@ -524,7 +462,7 @@ function statusColor(status: string): string {
               :to="`/clients/${buyer.customer.id}`"
               class="related-item"
             >
-              <span>{{ buyer.customer.type === 'individual' ? '👤' : '🏢' }}</span>
+              <component :is="buyer.customer.type === 'individual' ? User : Building2" class="h-4 w-4 inline" :stroke-width="1.5" />
               <div style="flex:1">
                 <div style="font-weight:600">{{ buyer.customer.name }}</div>
                 <div style="font-size:0.8125rem;color:var(--color-text-muted)">
@@ -547,7 +485,7 @@ function statusColor(status: string): string {
                 :to="`/contrats/${ct.contractId}`"
                 class="related-item"
               >
-                <span>📜</span>
+                <span><FileText class="h-4 w-4 inline" :stroke-width="1.5" /></span>
                 <div style="flex:1">
                   <div style="font-weight:600">
                     Contrat {{ ct.contract?.contractNumber || `#${ct.contractId.slice(0, 8)}` }}
@@ -563,7 +501,7 @@ function statusColor(status: string): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📜</span>
+            <span><FileText class="h-4 w-4 inline" :stroke-width="1.5" /></span>
             <p>Aucun contrat lié</p>
             <RouterLink to="/contrats/nouveau" class="btn btn-secondary btn-sm">
               + Créer un Contrat
@@ -582,7 +520,7 @@ function statusColor(status: string): string {
                 class="related-item"
                 style="cursor:default"
               >
-                <span>{{ td.document?.mimeType?.startsWith('image/') ? '🖼️' : '📄' }}</span>
+                <File class="h-4 w-4 inline" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">{{ td.document?.name || 'Document' }}</div>
                   <div style="font-size:0.8125rem;color:var(--color-text-muted)">
@@ -605,7 +543,7 @@ function statusColor(status: string): string {
             </div>
           </template>
           <div v-else class="related-items-empty">
-            <span>📄</span>
+            <span><File class="h-4 w-4 inline" :stroke-width="1.5" /></span>
             <p>Aucun document associé</p>
           </div>
         </div>
@@ -634,11 +572,11 @@ function statusColor(status: string): string {
           <template v-else>
             <div class="info-grid">
               <div class="info-item">
-                <span class="info-label">📍 Latitude</span>
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Latitude</span>
                 <span class="info-value">{{ terrain.latitude ?? '—' }}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">📍 Longitude</span>
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Longitude</span>
                 <span class="info-value">{{ terrain.longitude ?? '—' }}</span>
               </div>
             </div>
@@ -674,7 +612,7 @@ function statusColor(status: string): string {
     </template>
 
     <div v-else class="empty-state">
-      <span class="empty-state-icon">❌</span>
+      <span class="empty-state-icon"><XCircle class="h-12 w-12 text-destructive" :stroke-width="1.5" /></span>
       <p class="empty-state-title">Terrain introuvable</p>
       <RouterLink to="/terrains" class="btn btn-primary">Retour aux Terrains</RouterLink>
     </div>
@@ -687,7 +625,8 @@ function statusColor(status: string): string {
         <div class="modal-container">
           <div class="modal-header">
             <h2 class="modal-title">
-              {{ editingParcelId ? '✏️ Modifier la parcelle' : '+ Nouvelle parcelle' }}
+              <template v-if="editingParcelId"><Pencil class="h-3.5 w-3.5" :stroke-width="1.5" /> Modifier la parcelle</template>
+              <template v-else><Plus class="h-3.5 w-3.5" :stroke-width="1.5" /> Nouvelle parcelle</template>
             </h2>
             <button class="modal-close" @click="closeParcelModal">✕</button>
           </div>
