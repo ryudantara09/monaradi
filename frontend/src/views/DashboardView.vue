@@ -158,7 +158,7 @@ const dashboardCards = computed<DashboardCard[]>(() => {
       title: 'Documents',
       total: documents.value.length,
       listRoute: '/documents',
-      createRoute: '/documents',
+      createRoute: '/documents/nouveau',
       createLabel: 'Créer nouveau document',
       icon: FolderOpen,
       items: documentItems,

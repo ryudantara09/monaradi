@@ -110,6 +110,11 @@ export async function fetchDocuments(params?: { linked?: boolean; type?: string 
     return data;
 }
 
+export async function createDocument(payload: { name: string; type?: string }): Promise<any> {
+    const { data } = await api.post('/documents', payload);
+    return data;
+}
+
 export async function linkDocument(documentId: string, entityType: string, entityId: string): Promise<void> {
     await api.post(`/documents/${documentId}/link`, { entityType, entityId });
 }

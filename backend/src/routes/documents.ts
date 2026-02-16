@@ -126,25 +126,25 @@ router.post('/', upload.single('file'), async (req, res) => {
         const prisma: PrismaClient = req.app.locals.prisma;
         const { name, type, terrainId, customerId, contractId, parcelId, storeInDb } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+        if (!req.file && !name) {
+            return res.status(400).json({ error: 'Document name is required when no file is uploaded' });
         }
 
         // Read file data if storing in DB
         let fileData: Buffer | undefined;
-        if (storeInDb === 'true') {
+        if (req.file && storeInDb === 'true') {
             fileData = fs.readFileSync(req.file.path);
         }
 
         const document = await prisma.document.create({
             data: {
-                name: name || req.file.originalname,
-                filePath: req.file.path,
+                name: name || req.file?.originalname || 'Document sans nom',
+                filePath: req.file?.path,
                 fileData: fileData as any,
-                mimeType: req.file.mimetype,
+                mimeType: req.file?.mimetype,
                 type: type || 'other',
-                sizeBytes: req.file.size,
-                uploadedAt: new Date(),
+                sizeBytes: req.file?.size,
+                uploadedAt: req.file ? new Date() : undefined,
                 isLinked: !!(terrainId || customerId || contractId || parcelId),
             },
         });

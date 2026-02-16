@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchDocuments, updateDocument, deleteDocument } from '@/services/api';
-import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Eye } from '@/lib/icons';
+import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Eye, Plus } from '@/lib/icons';
 
 const documents = ref<any[]>([]);
 const searchQuery = ref('');
@@ -142,6 +142,12 @@ async function deleteDoc(doc: any) {
         <h1 class="page-title">Documents</h1>
         <p class="page-subtitle">Gestion centralisée de tous les fichiers</p>
       </div>
+      <div class="page-header-right">
+        <RouterLink to="/documents/nouveau" class="btn btn-primary">
+          <Plus class="h-4 w-4" :stroke-width="1.5" />
+          Nouveau document
+        </RouterLink>
+      </div>
     </header>
 
     <!-- Toolbar -->
@@ -179,7 +185,11 @@ async function deleteDoc(doc: any) {
     <div v-else-if="filteredDocuments.length === 0" class="empty-state">
       <FolderOpen class="h-12 w-12 mb-4 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucun document trouvé</h2>
-      <p class="empty-state-text">Essayez de modifier vos filtres.</p>
+      <p class="empty-state-text">Commencez par ajouter ou uploader un document.</p>
+      <RouterLink to="/documents/nouveau" class="btn btn-primary">
+        <Plus class="h-4 w-4" :stroke-width="1.5" />
+        Nouveau document
+      </RouterLink>
     </div>
 
     <!-- Grid View -->

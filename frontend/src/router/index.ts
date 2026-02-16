@@ -78,6 +78,11 @@ const router = createRouter({
             name: 'documents',
             component: () => import('@/views/DocumentsView.vue'),
         },
+        {
+            path: '/documents/nouveau',
+            name: 'document-new',
+            component: () => import('@/views/DocumentFormView.vue'),
+        },
         // Redirect old /projets routes to /terrains
         {
             path: '/projets',
