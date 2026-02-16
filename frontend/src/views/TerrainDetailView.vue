@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract, fetchDocuments, linkDocument } from '@/services/api';
+import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract, fetchDocuments, linkDocument, createCustomer, createDocument, uploadDocument } from '@/services/api';
 import TerrainEditorView from '@/views/TerrainEditorView.vue';
 import { LandPlot, Square, User, Building2, Pencil, Trash2, FileText, MapPin, XCircle, AlertCircle, File, Plus } from '@/lib/icons';
 
@@ -16,10 +16,37 @@ const isEditing = ref(false);
 const saving = ref(false);
 const loading = ref(true);
 const availableDocuments = ref<any[]>([]);
-const selectedDocumentIds = ref<string[]>([]);
-const linkingDocuments = ref(false);
-const linkDocumentsError = ref<string | null>(null);
-const showLinkDocumentsModal = ref(false);
+const showAddMenu = ref(false);
+
+type QuickCreateType = 'customer' | 'contract' | 'document';
+const showQuickCreateModal = ref(false);
+const quickCreateType = ref<QuickCreateType>('customer');
+const quickCreateSaving = ref(false);
+const quickCreateError = ref<string | null>(null);
+
+const customerCreateForm = ref({
+  name: '',
+  email: '',
+  phone: '',
+  address: '',
+  idNumber: '',
+  notes: '',
+});
+
+const contractCreateForm = ref({
+  contractNumber: '',
+  customerId: '',
+  notes: '',
+  terms: '',
+  saleAmount: '' as string | number,
+  parcelIds: [] as string[],
+});
+
+const documentCreateForm = ref({
+  name: '',
+  type: 'other',
+  file: null as File | null,
+});
 
 const formData = ref<any>({});
 
@@ -44,9 +71,176 @@ function parseApiError(error: any, fallback: string): string {
   return error?.response?.data?.error || fallback;
 }
 
+const contractEligibleParcels = computed(() => {
+  if (!terrain.value?.parcels) return [];
+  return terrain.value.parcels.filter((parcel: any) => parcel.status !== 'SOLD');
+});
+
+const contractSelectedParcelsTotal = computed(() => {
+  if (!terrain.value?.parcels?.length || contractCreateForm.value.parcelIds.length === 0) return 0;
+  return terrain.value.parcels
+    .filter((parcel: any) => contractCreateForm.value.parcelIds.includes(parcel.id))
+    .reduce((sum: number, parcel: any) => sum + (parcel.totalPrice || 0), 0);
+});
+
+function toggleAddMenu() {
+  showAddMenu.value = !showAddMenu.value;
+}
+
+function closeAddMenu() {
+  showAddMenu.value = false;
+}
+
+function openQuickCreateModal(type: QuickCreateType) {
+  closeAddMenu();
+  quickCreateType.value = type;
+  quickCreateError.value = null;
+
+  if (type === 'customer') {
+    customerCreateForm.value = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      idNumber: '',
+      notes: '',
+    };
+  }
+
+  if (type === 'contract') {
+    contractCreateForm.value = {
+      contractNumber: '',
+      customerId: '',
+      notes: '',
+      terms: '',
+      saleAmount: '',
+      parcelIds: [],
+    };
+  }
+
+  if (type === 'document') {
+    documentCreateForm.value = {
+      name: '',
+      type: 'other',
+      file: null,
+    };
+  }
+
+  showQuickCreateModal.value = true;
+}
+
+function closeQuickCreateModal() {
+  showQuickCreateModal.value = false;
+  quickCreateError.value = null;
+  quickCreateSaving.value = false;
+}
+
+function toggleContractParcelSelection(parcelId: string, checked: boolean) {
+  if (checked) {
+    if (!contractCreateForm.value.parcelIds.includes(parcelId)) {
+      contractCreateForm.value.parcelIds.push(parcelId);
+    }
+    return;
+  }
+  contractCreateForm.value.parcelIds = contractCreateForm.value.parcelIds.filter((id) => id !== parcelId);
+}
+
+function handleQuickDocumentFileChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0] || null;
+  documentCreateForm.value.file = file;
+  if (file && !documentCreateForm.value.name.trim()) {
+    documentCreateForm.value.name = file.name;
+  }
+}
+
+async function handleQuickCreateSubmit() {
+  if (!terrain.value?.id) return;
+  quickCreateSaving.value = true;
+  quickCreateError.value = null;
+
+  try {
+    if (quickCreateType.value === 'customer') {
+      if (!customerCreateForm.value.name.trim()) {
+        quickCreateError.value = 'Le nom du client est requis.';
+        return;
+      }
+
+      await createCustomer({
+        name: customerCreateForm.value.name.trim(),
+        email: customerCreateForm.value.email || undefined,
+        phone: customerCreateForm.value.phone || undefined,
+        address: customerCreateForm.value.address || undefined,
+        idNumber: customerCreateForm.value.idNumber || undefined,
+        notes: customerCreateForm.value.notes || undefined,
+      });
+
+      customers.value = await fetchCustomers();
+    }
+
+    if (quickCreateType.value === 'contract') {
+      if (!contractCreateForm.value.customerId) {
+        quickCreateError.value = 'Sélectionnez un client.';
+        return;
+      }
+      if (contractCreateForm.value.parcelIds.length === 0) {
+        quickCreateError.value = 'Sélectionnez au moins une parcelle du terrain.';
+        return;
+      }
+
+      await createContract({
+        contractNumber: contractCreateForm.value.contractNumber || undefined,
+        customerId: contractCreateForm.value.customerId,
+        notes: contractCreateForm.value.notes || undefined,
+        terms: contractCreateForm.value.terms || undefined,
+        saleAmount: Number(contractCreateForm.value.saleAmount) || contractSelectedParcelsTotal.value,
+        parcelIds: contractCreateForm.value.parcelIds,
+      });
+    }
+
+    if (quickCreateType.value === 'document') {
+      if (!documentCreateForm.value.file && !documentCreateForm.value.name.trim()) {
+        quickCreateError.value = 'Le nom du document est requis si aucun fichier n\'est uploadé.';
+        return;
+      }
+
+      if (documentCreateForm.value.file) {
+        const payload = new FormData();
+        payload.append('file', documentCreateForm.value.file);
+        payload.append('name', documentCreateForm.value.name.trim() || documentCreateForm.value.file.name);
+        payload.append('type', documentCreateForm.value.type);
+        payload.append('terrainId', terrain.value.id);
+        await uploadDocument(payload);
+      } else {
+        const createdDocument = await createDocument({
+          name: documentCreateForm.value.name.trim(),
+          type: documentCreateForm.value.type,
+        });
+        if (createdDocument?.id) {
+          await linkDocument(createdDocument.id, 'terrain', terrain.value.id);
+        }
+      }
+    }
+
+    const [updatedTerrain, docs] = await Promise.all([
+      fetchTerrain(terrain.value.id),
+      fetchDocuments(),
+    ]);
+    terrain.value = updatedTerrain;
+    availableDocuments.value = docs;
+    closeQuickCreateModal();
+  } catch (error) {
+    console.error('Erreur création rapide:', error);
+    quickCreateError.value = parseApiError(error, 'Erreur lors de la création.');
+  } finally {
+    quickCreateSaving.value = false;
+  }
+}
+
 const shouldShowContractFields = computed(() => !!parcelForm.value.customerId);
 
 function openAddParcel() {
+  closeAddMenu();
   editingParcelId.value = null;
   parcelModalError.value = null;
   parcelForm.value = {
@@ -306,65 +500,6 @@ const contractsFromParcels = computed(() => {
   );
 });
 
-const linkableDocuments = computed(() => {
-  const linkedIds = new Set((terrain.value?.documents || []).map((item: any) => item.documentId));
-  return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
-});
-
-function toggleDocumentSelection(documentId: string, checked: boolean) {
-  if (checked) {
-    if (!selectedDocumentIds.value.includes(documentId)) {
-      selectedDocumentIds.value.push(documentId);
-    }
-    return;
-  }
-
-  selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => id !== documentId);
-}
-
-function parseLinkError(error: any, fallback: string): string {
-  return error?.response?.data?.error || fallback;
-}
-
-async function handleLinkSelectedDocuments() {
-  if (!terrain.value?.id) return;
-  if (selectedDocumentIds.value.length === 0) {
-    linkDocumentsError.value = 'Sélectionnez au moins un document à lier.';
-    return;
-  }
-
-  linkingDocuments.value = true;
-  linkDocumentsError.value = null;
-  try {
-    await Promise.all(
-      selectedDocumentIds.value.map((documentId) => linkDocument(documentId, 'terrain', terrain.value.id))
-    );
-
-    const [updatedTerrain, docs] = await Promise.all([
-      fetchTerrain(terrain.value.id),
-      fetchDocuments(),
-    ]);
-    terrain.value = updatedTerrain;
-    availableDocuments.value = docs;
-    selectedDocumentIds.value = [];
-  } catch (error) {
-    console.error('Erreur liaison documents terrain:', error);
-    linkDocumentsError.value = parseLinkError(error, 'Erreur lors de la liaison des documents.');
-  } finally {
-    linkingDocuments.value = false;
-  }
-}
-
-function openLinkDocumentsModal() {
-  linkDocumentsError.value = null;
-  showLinkDocumentsModal.value = true;
-}
-
-function closeLinkDocumentsModal() {
-  showLinkDocumentsModal.value = false;
-  linkDocumentsError.value = null;
-}
-
 // Distinct buyers for this terrain
 const parcelBuyers = computed(() => {
   if (!terrain.value?.parcels) return [];
@@ -397,15 +532,6 @@ function statusColor(status: string): string {
   };
   return colors[status] || '#6b7280';
 }
-
-function paymentLabel(status: string): string {
-  const labels: Record<string, string> = {
-    UNPAID: 'Non payé',
-    PARTIAL: 'Partiel',
-    PAID: 'Payé',
-  };
-  return labels[status] || status;
-}
 </script>
 
 <template>
@@ -427,14 +553,18 @@ function paymentLabel(status: string): string {
           <p class="page-subtitle">{{ terrain.address || 'Aucune adresse spécifiée' }}</p>
         </div>
         <div class="page-actions">
-          <RouterLink
-            v-if="terrain"
-            :to="{ path: '/documents/nouveau', query: { terrainId: terrain.id } }"
-            class="btn btn-secondary"
-          >
-            <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
-            Nouveau document
-          </RouterLink>
+          <div class="action-menu-wrap">
+            <button class="btn btn-secondary" @click="toggleAddMenu">
+              <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
+              Ajouter
+            </button>
+            <div v-if="showAddMenu" class="action-menu">
+              <button class="action-menu-item" @click="openAddParcel">Parcelle</button>
+              <button class="action-menu-item" @click="openQuickCreateModal('customer')">Client</button>
+              <button class="action-menu-item" @click="openQuickCreateModal('contract')">Contrat</button>
+              <button class="action-menu-item" @click="openQuickCreateModal('document')">Document</button>
+            </div>
+          </div>
           <template v-if="isEditing">
             <button class="btn btn-secondary" @click="cancelEdit">Annuler</button>
             <button class="btn btn-primary" @click="handleSave" :disabled="saving">
@@ -497,10 +627,24 @@ function paymentLabel(status: string): string {
                   </select>
                 </div>
               </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Latitude</label>
+                  <input type="number" class="input" v-model.number="formData.latitude" step="0.0001" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Longitude</label>
+                  <input type="number" class="input" v-model.number="formData.longitude" step="0.0001" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Référence cadastrale</label>
+                <input type="text" class="input" v-model="formData.mapReference" />
+              </div>
             </div>
           </template>
           <template v-else>
-            <div class="info-grid">
+            <div class="info-grid base-info-grid">
               <div class="info-item">
                 <span class="info-label"><Square class="h-4 w-4 inline" :stroke-width="1.5" /> Surface</span>
                 <span class="info-value">{{ formatArea(terrain) }}</span>
@@ -514,6 +658,14 @@ function paymentLabel(status: string): string {
               <div class="info-item">
                 <span class="info-label"><LandPlot class="h-4 w-4 inline" :stroke-width="1.5" /> Référence cadastrale</span>
                 <span class="info-value">{{ terrain.mapReference || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Latitude</span>
+                <span class="info-value">{{ terrain.latitude ?? '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Longitude</span>
+                <span class="info-value">{{ terrain.longitude ?? '—' }}</span>
               </div>
               <div class="info-item full-width">
                 <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Adresse</span>
@@ -535,24 +687,19 @@ function paymentLabel(status: string): string {
         <!-- ============================================ -->
         <!-- PARCELS TABLE - Main Section -->
         <!-- ============================================ -->
-        <div class="detail-section">
+        <div class="related-sections-grid">
+        <div class="detail-section compact-section">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-sm)">
             <h2 class="section-title" style="margin-bottom:0">Parcelles du terrain</h2>
-            <button class="btn btn-primary" @click="openAddParcel">
-              + Ajouter Parcelle
-            </button>
           </div>
           <template v-if="terrain.parcels && terrain.parcels.length > 0">
-            <div class="content-section" style="margin-top: var(--space-sm);">
+            <div class="content-section compact-scroll-panel" style="margin-top: var(--space-sm);">
               <table class="table">
                 <thead>
                   <tr>
                     <th>Nom</th>
                     <th>Surface (m²)</th>
-                    <th>Prix/m²</th>
-                    <th>Prix Total</th>
                     <th>Statut</th>
-                    <th>Paiement</th>
                     <th>Acheteur</th>
                     <th>Actions</th>
                   </tr>
@@ -561,8 +708,6 @@ function paymentLabel(status: string): string {
                   <tr v-for="parcel in terrain.parcels" :key="parcel.id">
                     <td style="font-weight: 600">{{ parcel.label }}</td>
                     <td>{{ parcel.areaSqm?.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }}</td>
-                    <td>{{ formatPrice(parcel.pricePerSqm) }}</td>
-                    <td style="font-weight: 600">{{ formatPrice(parcel.totalPrice) }}</td>
                     <td>
                       <span
                         class="status-badge"
@@ -572,17 +717,6 @@ function paymentLabel(status: string): string {
                         }"
                       >
                         {{ statusLabel(parcel.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        class="status-badge"
-                        :style="{
-                          background: parcel.paymentStatus === 'PAID' ? 'rgba(16,185,129,0.15)' : parcel.paymentStatus === 'PARTIAL' ? 'rgba(245,158,11,0.15)' : 'rgba(107,114,128,0.15)',
-                          color: parcel.paymentStatus === 'PAID' ? '#10b981' : parcel.paymentStatus === 'PARTIAL' ? '#f59e0b' : '#6b7280'
-                        }"
-                      >
-                        {{ paymentLabel(parcel.paymentStatus) }}
                       </span>
                     </td>
                     <td>
@@ -628,9 +762,9 @@ function paymentLabel(status: string): string {
         <!-- ============================================ -->
         <!-- BUYERS LIST -->
         <!-- ============================================ -->
-        <div class="detail-section" v-if="parcelBuyers.length > 0">
+        <div class="detail-section compact-section" v-if="parcelBuyers.length > 0">
           <h2 class="section-title">Acheteurs de parcelles</h2>
-          <div class="related-items">
+          <div class="related-items compact-scroll-panel">
             <RouterLink
               v-for="buyer in parcelBuyers"
               :key="buyer.customer.id"
@@ -650,10 +784,10 @@ function paymentLabel(status: string): string {
         </div>
 
         <!-- Contracts -->
-        <div class="detail-section">
+        <div class="detail-section compact-section">
           <h2 class="section-title">Contrats de vente</h2>
           <template v-if="contractsFromParcels.length > 0">
-            <div class="related-items">
+            <div class="related-items compact-scroll-panel">
               <RouterLink
                 v-for="ct in contractsFromParcels"
                 :key="ct.id"
@@ -684,7 +818,7 @@ function paymentLabel(status: string): string {
         </div>
 
         <!-- Documents -->
-        <div class="detail-section">
+        <div class="detail-section compact-section">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
             <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
             <RouterLink
@@ -696,7 +830,7 @@ function paymentLabel(status: string): string {
             </RouterLink>
           </div>
           <template v-if="terrain.documents && terrain.documents.length > 0">
-            <div class="related-items">
+            <div class="related-items compact-scroll-panel">
               <div
                 v-for="td in terrain.documents"
                 :key="td.documentId"
@@ -730,46 +864,7 @@ function paymentLabel(status: string): string {
             <p>Aucun document associé</p>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
-            <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
-              Lier documents
-            </button>
-          </div>
         </div>
-
-        <!-- Location -->
-        <div class="detail-section">
-          <h2 class="section-title">Coordonnées</h2>
-          <template v-if="isEditing">
-            <div style="display:flex;flex-direction:column;gap:var(--space-md)">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Latitude</label>
-                  <input type="number" class="input" v-model.number="formData.latitude" step="0.0001" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Longitude</label>
-                  <input type="number" class="input" v-model.number="formData.longitude" step="0.0001" />
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Référence cartographique</label>
-                <input type="text" class="input" v-model="formData.mapReference" />
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Latitude</span>
-                <span class="info-value">{{ terrain.latitude ?? '—' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Longitude</span>
-                <span class="info-value">{{ terrain.longitude ?? '—' }}</span>
-              </div>
-            </div>
-          </template>
         </div>
 
         <!-- Notes -->
@@ -810,36 +905,133 @@ function paymentLabel(status: string): string {
     <!-- PARCEL ADD/EDIT MODAL -->
     <!-- ============================================ -->
     <Teleport to="body">
-      <div v-if="showLinkDocumentsModal" class="modal-overlay" @click.self="closeLinkDocumentsModal">
+      <div v-if="showQuickCreateModal" class="modal-overlay" @click.self="closeQuickCreateModal">
         <div class="modal-container" style="max-width:760px;">
           <div class="modal-header">
-            <h2 class="modal-title"><FileText class="h-4 w-4" :stroke-width="1.5" /> Lier des documents</h2>
-            <button class="modal-close" @click="closeLinkDocumentsModal">✕</button>
+            <h2 class="modal-title">
+              <template v-if="quickCreateType === 'customer'"><Plus class="h-3.5 w-3.5" :stroke-width="1.5" /> Nouveau client</template>
+              <template v-else-if="quickCreateType === 'contract'"><Plus class="h-3.5 w-3.5" :stroke-width="1.5" /> Nouveau contrat</template>
+              <template v-else><Plus class="h-3.5 w-3.5" :stroke-width="1.5" /> Nouveau document</template>
+            </h2>
+            <button class="modal-close" @click="closeQuickCreateModal">✕</button>
           </div>
           <div class="modal-body">
-            <p style="margin:0;color:var(--color-text-muted);font-size:0.875rem;">
-              Sélectionnez les documents existants à lier à ce terrain.
-            </p>
-            <div v-if="linkableDocuments.length > 0" style="display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-sm);">
-              <label v-for="doc in linkableDocuments" :key="doc.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
-                <input
-                  type="checkbox"
-                  :checked="selectedDocumentIds.includes(doc.id)"
-                  @change="toggleDocumentSelection(doc.id, ($event.target as HTMLInputElement).checked)"
-                />
-                <span>{{ doc.name }}</span>
-              </label>
-            </div>
-            <p v-else style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">Aucun document disponible à lier.</p>
+            <template v-if="quickCreateType === 'customer'">
+              <div class="form-group">
+                <label class="form-label">Nom complet *</label>
+                <input type="text" class="input" v-model="customerCreateForm.name" placeholder="ex : Mohamed Ben Ali" autofocus />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="input" v-model="customerCreateForm.email" placeholder="email@exemple.com" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Téléphone</label>
+                  <input type="tel" class="input" v-model="customerCreateForm.phone" placeholder="+216 12 345 678" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Adresse</label>
+                <input type="text" class="input" v-model="customerCreateForm.address" placeholder="Adresse complète" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CIN / Identifiant</label>
+                <input type="text" class="input" v-model="customerCreateForm.idNumber" placeholder="CIN, Passeport..." />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="input textarea" v-model="customerCreateForm.notes" rows="3" />
+              </div>
+              <p style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">
+                Le client sera disponible immédiatement pour la création de parcelles/contrats sur ce terrain.
+              </p>
+            </template>
 
-            <div v-if="linkDocumentsError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;">
-              {{ linkDocumentsError }}
+            <template v-else-if="quickCreateType === 'contract'">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">N° contrat</label>
+                  <input type="text" class="input" v-model="contractCreateForm.contractNumber" placeholder="CTR-2026-001" autofocus />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Montant vente (TND)</label>
+                  <input type="number" class="input" v-model="contractCreateForm.saleAmount" step="0.01" placeholder="Auto si vide" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Client *</label>
+                <select class="input" v-model="contractCreateForm.customerId">
+                  <option value="">Sélectionner un client</option>
+                  <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Parcelles du terrain *</label>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;max-height:220px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-sm);">
+                  <label v-for="parcel in contractEligibleParcels" :key="parcel.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+                    <input
+                      type="checkbox"
+                      :checked="contractCreateForm.parcelIds.includes(parcel.id)"
+                      @change="toggleContractParcelSelection(parcel.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span>
+                      {{ parcel.label }} — {{ formatPrice(parcel.totalPrice) }}
+                    </span>
+                  </label>
+                  <p v-if="contractEligibleParcels.length === 0" style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">
+                    Aucune parcelle disponible pour un nouveau contrat.
+                  </p>
+                </div>
+                <p style="margin:var(--space-xs) 0 0 0;color:var(--color-text-muted);font-size:0.8125rem;">
+                  Total sélectionné: {{ formatPrice(contractSelectedParcelsTotal) }}
+                </p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Conditions</label>
+                <textarea class="input textarea" v-model="contractCreateForm.terms" rows="2" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="input textarea" v-model="contractCreateForm.notes" rows="2" />
+              </div>
+            </template>
+
+            <template v-else>
+              <div class="form-group">
+                <label class="form-label">Fichier (optionnel)</label>
+                <label class="upload-box">
+                  <span>{{ documentCreateForm.file ? documentCreateForm.file.name : 'Choisir un fichier' }}</span>
+                  <input type="file" class="sr-only" @change="handleQuickDocumentFileChange" />
+                </label>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nom du document</label>
+                <input type="text" class="input" v-model="documentCreateForm.name" placeholder="Nom du document" autofocus />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Type</label>
+                <select class="input" v-model="documentCreateForm.type">
+                  <option value="other">Autre</option>
+                  <option value="terrain_image">Image Terrain</option>
+                  <option value="satellite">Image Satellite</option>
+                  <option value="contract">Contrat</option>
+                  <option value="identity">Identité (ID)</option>
+                </select>
+              </div>
+              <p style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">
+                Le document sera lié automatiquement à ce terrain.
+              </p>
+            </template>
+
+            <div v-if="quickCreateError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;white-space:pre-wrap;">
+              {{ quickCreateError }}
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeLinkDocumentsModal">Annuler</button>
-            <button class="btn btn-primary" :disabled="linkingDocuments" @click="handleLinkSelectedDocuments">
-              {{ linkingDocuments ? 'Liaison...' : 'Lier la sélection' }}
+            <button class="btn btn-secondary" @click="closeQuickCreateModal">Annuler</button>
+            <button class="btn btn-primary" :disabled="quickCreateSaving" @click="handleQuickCreateSubmit">
+              {{ quickCreateSaving ? 'Enregistrement...' : 'Créer' }}
             </button>
           </div>
         </div>
@@ -1025,6 +1217,93 @@ function paymentLabel(status: string): string {
   gap: var(--space-sm, 0.5rem);
   padding: var(--space-lg, 1.5rem);
   border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+.action-menu-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.action-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem;
+  background: var(--color-bg-secondary, #1a1f2e);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+
+.action-menu-item {
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.action-menu-item:hover {
+  background: var(--color-bg-card, rgba(255, 255, 255, 0.06));
+}
+
+.base-info-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.related-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.compact-section {
+  min-height: 360px;
+}
+
+.compact-scroll-panel {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.upload-box {
+  border: 1px dashed var(--border, var(--color-border));
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+@media (max-width: 1080px) {
+  .related-sections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .base-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .base-info-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes fadeIn {
