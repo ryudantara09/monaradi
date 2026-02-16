@@ -126,6 +126,14 @@ function getLinkedEntities(doc: any) {
   return links;
 }
 
+function getVisibleLinkedEntities(doc: any, limit = 2) {
+  return getLinkedEntities(doc).slice(0, limit);
+}
+
+function getHiddenLinkedEntitiesCount(doc: any, limit = 2) {
+  return Math.max(getLinkedEntities(doc).length - limit, 0);
+}
+
 function openEdit(doc: any) {
   editingDocumentId.value = doc.id;
   editForm.value = {
@@ -328,7 +336,7 @@ async function deleteDoc(doc: any) {
 
              <!-- Linked Entities -->
             <div class="document-links" v-if="getLinkedEntities(doc).length > 0">
-              <div v-for="link in getLinkedEntities(doc)" :key="link.id" class="document-link-item">
+              <div v-for="link in getVisibleLinkedEntities(doc)" :key="link.id" class="document-link-item">
                 <RouterLink :to="link.to" class="link-tag" :title="link.name">
                   <component
                     :is="link.type === 'terrain' ? LandPlot : link.type === 'customer' ? User : link.type === 'contract' ? FileText : Square"
@@ -338,6 +346,9 @@ async function deleteDoc(doc: any) {
                   {{ link.name }}
                 </RouterLink>
               </div>
+              <span v-if="getHiddenLinkedEntitiesCount(doc) > 0" class="links-more">
+                +{{ getHiddenLinkedEntitiesCount(doc) }}
+              </span>
             </div>
         </div>
 
@@ -542,7 +553,7 @@ async function deleteDoc(doc: any) {
 }
 
 .document-preview {
-  height: 120px;
+  height: 84px;
   background: var(--muted);
   display: flex;
   align-items: center;
@@ -551,7 +562,7 @@ async function deleteDoc(doc: any) {
 }
 
 .document-info {
-  padding: 1rem;
+  padding: 0.75rem;
   flex: 1;
 }
 
@@ -569,7 +580,7 @@ async function deleteDoc(doc: any) {
   gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--muted-foreground);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .document-date {
@@ -578,7 +589,7 @@ async function deleteDoc(doc: any) {
 }
 
 .document-actions {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--border);
   background: var(--muted);
 }
@@ -609,6 +620,16 @@ async function deleteDoc(doc: any) {
 .link-tag:hover {
   background: color-mix(in oklch, var(--primary), transparent 80%);
   text-decoration: underline;
+}
+
+.links-more {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  background: var(--muted);
 }
 
 /* Modal Styles */

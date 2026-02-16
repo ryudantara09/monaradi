@@ -37,11 +37,13 @@ Execution workflow (strict):
     1.6 [x] Validation + commit
         1.6.1 [x] Validate UX and data-linking behavior
         1.6.2 [x] Commit with clear message for Terrain Details layout update
-2. [ ] Follow the same style and strategy for all the other entities pages
+2. [x] Follow the same style and strategy for all the other entities pages
     2.1 [x] Contracts detail page
     2.2 [x] Customers detail page
-    2.3 [ ] Parcels detail page
-    2.4 [ ] Documents detail page
-    2.5 [ ] Validate and commit each page update separately
+    2.3 [x] Parcels detail page
+    2.4 [x] Documents detail page
+    2.5 [x] Validate and commit each page update separately
         2.5.1 [x] Contracts detail page validated + committed
         2.5.2 [x] Customers detail page validated + committed
+        2.5.3 [x] Parcels detail page validated + committed
+        2.5.4 [x] Documents detail page validated + committed
