@@ -16,6 +16,10 @@ const isEditing = ref(false);
 const saving = ref(false);
 const loading = ref(true);
 const availableDocuments = ref<any[]>([]);
+const selectedDocumentIds = ref<string[]>([]);
+const linkingDocuments = ref(false);
+const linkDocumentsError = ref<string | null>(null);
+const showLinkDocumentsModal = ref(false);
 const showAddMenu = ref(false);
 
 type QuickCreateType = 'customer' | 'contract' | 'document';
@@ -500,6 +504,62 @@ const contractsFromParcels = computed(() => {
   );
 });
 
+const linkableDocuments = computed(() => {
+  const linkedIds = new Set((terrain.value?.documents || []).map((item: any) => item.documentId));
+  return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
+});
+
+function toggleDocumentSelection(documentId: string, checked: boolean) {
+  if (checked) {
+    if (!selectedDocumentIds.value.includes(documentId)) {
+      selectedDocumentIds.value.push(documentId);
+    }
+    return;
+  }
+
+  selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => id !== documentId);
+}
+
+async function handleLinkSelectedDocuments() {
+  if (!terrain.value?.id) return;
+  if (selectedDocumentIds.value.length === 0) {
+    linkDocumentsError.value = 'Sélectionnez au moins un document à lier.';
+    return;
+  }
+
+  linkingDocuments.value = true;
+  linkDocumentsError.value = null;
+  try {
+    await Promise.all(
+      selectedDocumentIds.value.map((documentId) => linkDocument(documentId, 'terrain', terrain.value.id))
+    );
+
+    const [updatedTerrain, docs] = await Promise.all([
+      fetchTerrain(terrain.value.id),
+      fetchDocuments(),
+    ]);
+    terrain.value = updatedTerrain;
+    availableDocuments.value = docs;
+    selectedDocumentIds.value = [];
+    closeLinkDocumentsModal();
+  } catch (error) {
+    console.error('Erreur liaison documents terrain:', error);
+    linkDocumentsError.value = parseApiError(error, 'Erreur lors de la liaison des documents.');
+  } finally {
+    linkingDocuments.value = false;
+  }
+}
+
+function openLinkDocumentsModal() {
+  linkDocumentsError.value = null;
+  showLinkDocumentsModal.value = true;
+}
+
+function closeLinkDocumentsModal() {
+  showLinkDocumentsModal.value = false;
+  linkDocumentsError.value = null;
+}
+
 // Distinct buyers for this terrain
 const parcelBuyers = computed(() => {
   if (!terrain.value?.parcels) return [];
@@ -821,13 +881,18 @@ function statusColor(status: string): string {
         <div class="detail-section compact-section">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
             <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
-            <RouterLink
-              :to="{ path: '/documents/nouveau', query: { terrainId: terrain.id } }"
-              class="btn btn-secondary btn-sm"
-            >
-              <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
-              Ajouter document
-            </RouterLink>
+            <div style="display:flex;align-items:center;gap:var(--space-sm)">
+              <RouterLink
+                :to="{ path: '/documents/nouveau', query: { terrainId: terrain.id } }"
+                class="btn btn-secondary btn-sm"
+              >
+                <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
+                Ajouter document
+              </RouterLink>
+              <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
+                Lier documents
+              </button>
+            </div>
           </div>
           <template v-if="terrain.documents && terrain.documents.length > 0">
             <div class="related-items compact-scroll-panel">
@@ -905,6 +970,41 @@ function statusColor(status: string): string {
     <!-- PARCEL ADD/EDIT MODAL -->
     <!-- ============================================ -->
     <Teleport to="body">
+      <div v-if="showLinkDocumentsModal" class="modal-overlay" @click.self="closeLinkDocumentsModal">
+        <div class="modal-container" style="max-width:760px;">
+          <div class="modal-header">
+            <h2 class="modal-title"><FileText class="h-4 w-4" :stroke-width="1.5" /> Lier des documents</h2>
+            <button class="modal-close" @click="closeLinkDocumentsModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin:0;color:var(--color-text-muted);font-size:0.875rem;">
+              Sélectionnez les documents existants à lier à ce terrain.
+            </p>
+            <div v-if="linkableDocuments.length > 0" style="display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-sm);">
+              <label v-for="doc in linkableDocuments" :key="doc.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+                <input
+                  type="checkbox"
+                  :checked="selectedDocumentIds.includes(doc.id)"
+                  @change="toggleDocumentSelection(doc.id, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ doc.name }}</span>
+              </label>
+            </div>
+            <p v-else style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">Aucun document disponible à lier.</p>
+
+            <div v-if="linkDocumentsError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;">
+              {{ linkDocumentsError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeLinkDocumentsModal">Annuler</button>
+            <button class="btn btn-primary" :disabled="linkingDocuments" @click="handleLinkSelectedDocuments">
+              {{ linkingDocuments ? 'Liaison...' : 'Lier la sélection' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="showQuickCreateModal" class="modal-overlay" @click.self="closeQuickCreateModal">
         <div class="modal-container" style="max-width:760px;">
           <div class="modal-header">
