@@ -667,11 +667,11 @@ function statusColor(status: string): string {
                 <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Longitude</span>
                 <span class="info-value">{{ terrain.longitude ?? '—' }}</span>
               </div>
-              <div class="info-item full-width">
+              <div class="info-item">
                 <span class="info-label"><MapPin class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Adresse</span>
                 <span class="info-value">{{ terrain.address || '—' }}</span>
               </div>
-              <div v-if="terrain.areaSize" class="info-item full-width">
+              <div v-if="terrain.areaSize" class="info-item">
                 <span class="info-label"><Square class="h-4 w-4 inline" :stroke-width="1.5" /> Répartition des surfaces</span>
                 <span class="info-value" :style="{ color: isTerrainAreaExceeded ? '#ef4444' : 'var(--color-text-secondary)' }">
                   Parcelles : {{ totalParcelArea.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m² / Terrain : {{ Number(terrain.areaSize).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) }} m²
