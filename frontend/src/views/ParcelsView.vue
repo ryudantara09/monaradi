@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchParcels } from '@/services/api';
-import { Search, Square, MapPin, User, Grid3x3, List } from '@/lib/icons';
+import { Search, Square, MapPin, User, Grid3x3, List, Plus } from '@/lib/icons';
 
 const parcels = ref<any[]>([]);
 const searchQuery = ref('');
@@ -60,6 +60,12 @@ function statusColor(status: string): string {
         <h1 class="page-title">Parcelles</h1>
         <p class="page-subtitle">Vue d'ensemble de toutes les parcelles</p>
       </div>
+      <div class="page-header-right">
+        <RouterLink to="/parcelles/nouveau" class="btn btn-primary">
+          <Plus class="h-4 w-4" :stroke-width="1.5" />
+          Ajouter Parcelle
+        </RouterLink>
+      </div>
     </header>
 
     <!-- Toolbar -->
@@ -103,9 +109,10 @@ function statusColor(status: string): string {
     <div v-else-if="filteredParcels.length === 0" class="empty-state">
       <Square class="h-12 w-12 mb-4 text-muted-foreground opacity-50" :stroke-width="1.5" />
       <h2 class="empty-state-title">Aucune parcelle</h2>
-      <p class="empty-state-text">Les parcelles sont créées à l'intérieur des terrains.</p>
-      <RouterLink to="/terrains" class="btn btn-primary">
-        Aller aux Terrains
+      <p class="empty-state-text">Créez votre première parcelle depuis cette vue.</p>
+      <RouterLink to="/parcelles/nouveau" class="btn btn-primary">
+        <Plus class="h-4 w-4" :stroke-width="1.5" />
+        Ajouter Parcelle
       </RouterLink>
     </div>
 

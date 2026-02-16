@@ -64,6 +64,11 @@ const router = createRouter({
             component: () => import('@/views/ParcelsView.vue'),
         },
         {
+            path: '/parcelles/nouveau',
+            name: 'parcel-new',
+            component: () => import('@/views/ParcelFormView.vue'),
+        },
+        {
             path: '/parcelles/:id',
             name: 'parcel-detail',
             component: () => import('@/views/ParcelDetailView.vue'),

@@ -128,7 +128,7 @@ const dashboardCards = computed<DashboardCard[]>(() => {
       title: 'Parcelles',
       total: parcels.value.length,
       listRoute: '/parcelles',
-      createRoute: '/terrains',
+      createRoute: '/parcelles/nouveau',
       createLabel: 'Créer nouvelle parcelle',
       icon: Square,
       items: parcelItems,
@@ -229,7 +229,7 @@ const dashboardCards = computed<DashboardCard[]>(() => {
             v-if="card.key === 'parcelles'"
             class="mt-2 text-xs text-muted-foreground"
           >
-            La création de parcelles se fait depuis un terrain.
+            Sélectionnez le terrain directement dans le formulaire de création.
           </p>
           <p
             v-if="card.key === 'documents'"
