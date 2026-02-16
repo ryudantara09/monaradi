@@ -259,8 +259,17 @@ function closeLinkDocumentsModal() {
         <div class="info-list compact-doc-list" v-if="parcel.documents && parcel.documents.length > 0">
           <div v-for="pd in parcel.documents" :key="pd.documentId" class="info-row">
             <span class="label">{{ pd.document?.name || 'Document' }}</span>
-            <span class="value" style="font-size:0.8125rem">
-              {{ pd.document?.type || 'autre' }}
+            <span style="display:flex;align-items:center;gap:0.5rem;justify-content:flex-end">
+              <span class="value" style="font-size:0.8125rem">
+                {{ pd.document?.type || 'autre' }}
+              </span>
+              <RouterLink
+                v-if="pd.document?.id"
+                :to="`/documents/${pd.document.id}`"
+                class="btn btn-secondary btn-sm"
+              >
+                Ouvrir
+              </RouterLink>
             </span>
           </div>
         </div>

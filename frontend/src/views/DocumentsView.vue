@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { fetchDocuments, updateDocument, deleteDocument, linkDocument, fetchTerrains, fetchCustomers, fetchParcels, fetchContracts } from '@/services/api';
-import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Eye, Plus } from '@/lib/icons';
+import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Plus } from '@/lib/icons';
+
+const router = useRouter();
 
 const documents = ref<any[]>([]);
 const searchQuery = ref('');
@@ -253,6 +255,10 @@ async function deleteDoc(doc: any) {
     alert('Erreur lors de la suppression');
   }
 }
+
+function openDocumentDetail(documentId: string) {
+  router.push(`/documents/${documentId}`);
+}
 </script>
 
 <template>
@@ -318,6 +324,11 @@ async function deleteDoc(doc: any) {
         v-for="doc in filteredDocuments"
         :key="doc.id"
         class="document-card"
+        role="button"
+        tabindex="0"
+        @click="openDocumentDetail(doc.id)"
+        @keydown.enter="openDocumentDetail(doc.id)"
+        @keydown.space.prevent="openDocumentDetail(doc.id)"
       >
         <div class="document-preview">
           <File class="h-10 w-10 text-muted-foreground" :stroke-width="1.5" />
@@ -337,7 +348,7 @@ async function deleteDoc(doc: any) {
              <!-- Linked Entities -->
             <div class="document-links" v-if="getLinkedEntities(doc).length > 0">
               <div v-for="link in getVisibleLinkedEntities(doc)" :key="link.id" class="document-link-item">
-                <RouterLink :to="link.to" class="link-tag" :title="link.name">
+                <RouterLink :to="link.to" class="link-tag" :title="link.name" @click.stop>
                   <component
                     :is="link.type === 'terrain' ? LandPlot : link.type === 'customer' ? User : link.type === 'contract' ? FileText : Square"
                     class="h-3 w-3"
@@ -352,26 +363,18 @@ async function deleteDoc(doc: any) {
             </div>
         </div>
 
-        <div class="document-actions">
+        <div class="document-actions" @click.stop>
              <div style="display:flex; gap:0.5rem; margin-bottom: 0.5rem;">
-                <button class="btn btn-secondary btn-sm" @click="openLink(doc)" title="Lier">
+                <button class="btn btn-secondary btn-sm" @click.stop="openLink(doc)" title="Lier">
                   Lier
                 </button>
-                <button class="btn btn-secondary btn-sm" @click="openEdit(doc)" title="Modifier">
+                <button class="btn btn-secondary btn-sm" @click.stop="openEdit(doc)" title="Modifier">
                   <Pencil class="h-3.5 w-3.5" :stroke-width="1.5" />
                 </button>
-                <button class="btn btn-danger btn-sm" @click="deleteDoc(doc)" title="Supprimer">
+                <button class="btn btn-danger btn-sm" @click.stop="deleteDoc(doc)" title="Supprimer">
                   <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" />
                 </button>
              </div>
-            <RouterLink
-              :to="`/documents/${doc.id}`"
-              class="btn btn-secondary btn-sm"
-              style="width: 100%; justify-content: center;"
-            >
-              <Eye class="h-3.5 w-3.5" :stroke-width="1.5" />
-              Ouvrir
-            </RouterLink>
         </div>
       </div>
     </div>
@@ -539,6 +542,7 @@ async function deleteDoc(doc: any) {
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .document-card:hover {
