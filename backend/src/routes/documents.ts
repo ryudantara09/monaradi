@@ -226,25 +226,37 @@ router.post('/:id/link', async (req, res) => {
         const { id } = req.params;
         const { entityType, entityId } = req.body;
 
+        if (!entityId) {
+            return res.status(400).json({ error: 'entityId is required' });
+        }
+
         switch (entityType) {
             case 'terrain':
-                await prisma.terrainDocument.create({
-                    data: { terrainId: entityId, documentId: id },
+                await prisma.terrainDocument.upsert({
+                    where: { terrainId_documentId: { terrainId: entityId, documentId: id } },
+                    create: { terrainId: entityId, documentId: id },
+                    update: {},
                 });
                 break;
             case 'customer':
-                await prisma.customerDocument.create({
-                    data: { customerId: entityId, documentId: id },
+                await prisma.customerDocument.upsert({
+                    where: { customerId_documentId: { customerId: entityId, documentId: id } },
+                    create: { customerId: entityId, documentId: id },
+                    update: {},
                 });
                 break;
             case 'contract':
-                await prisma.contractDocument.create({
-                    data: { contractId: entityId, documentId: id },
+                await prisma.contractDocument.upsert({
+                    where: { contractId_documentId: { contractId: entityId, documentId: id } },
+                    create: { contractId: entityId, documentId: id },
+                    update: {},
                 });
                 break;
             case 'parcel':
-                await prisma.parcelDocument.create({
-                    data: { parcelId: entityId, documentId: id },
+                await prisma.parcelDocument.upsert({
+                    where: { parcelId_documentId: { parcelId: entityId, documentId: id } },
+                    create: { parcelId: entityId, documentId: id },
+                    update: {},
                 });
                 break;
             default:

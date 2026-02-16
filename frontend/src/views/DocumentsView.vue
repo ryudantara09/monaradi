@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
-import { fetchDocuments, updateDocument, deleteDocument } from '@/services/api';
+import { fetchDocuments, updateDocument, deleteDocument, linkDocument, fetchTerrains, fetchCustomers, fetchParcels, fetchContracts } from '@/services/api';
 import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Eye, Plus } from '@/lib/icons';
 
 const documents = ref<any[]>([]);
@@ -22,9 +22,40 @@ const editingDocumentId = ref<string | null>(null);
 const editForm = ref({ name: '', type: 'other' });
 const editSaving = ref(false);
 
-onMounted(async () => {
-  await loadDocuments();
+const terrains = ref<any[]>([]);
+const customers = ref<any[]>([]);
+const parcels = ref<any[]>([]);
+const contracts = ref<any[]>([]);
+
+const linkingDocumentId = ref<string | null>(null);
+const linkForm = ref({
+  entityType: 'terrain',
+  entityId: '',
 });
+const linkSaving = ref(false);
+const linkError = ref<string | null>(null);
+
+onMounted(async () => {
+  await Promise.all([loadDocuments(), loadEntitiesForLinking()]);
+});
+
+async function loadEntitiesForLinking() {
+  try {
+    const [terrainsData, customersData, parcelsData, contractsData] = await Promise.all([
+      fetchTerrains(),
+      fetchCustomers(),
+      fetchParcels(),
+      fetchContracts(),
+    ]);
+
+    terrains.value = terrainsData;
+    customers.value = customersData;
+    parcels.value = parcelsData;
+    contracts.value = contractsData;
+  } catch (error) {
+    console.error('Erreur chargement des entités pour liaison:', error);
+  }
+}
 
 async function loadDocuments() {
   loading.value = true;
@@ -86,7 +117,7 @@ function getLinkedEntities(doc: any) {
   }
   if (doc.parcels?.length) {
     doc.parcels.forEach((p: any) => {
-      if (p.parcel) links.push({ id: `p-${p.parcel.id}`, to: `/terrains/${p.parcel.terrainId}`, name: p.parcel.label, type: 'parcel' });
+      if (p.parcel) links.push({ id: `p-${p.parcel.id}`, to: `/parcelles/${p.parcel.id}`, name: p.parcel.label, type: 'parcel' });
     });
   }
 
@@ -99,6 +130,65 @@ function openEdit(doc: any) {
     name: doc.name,
     type: doc.type || 'other',
   };
+}
+
+const selectedEntityOptions = computed(() => {
+  if (linkForm.value.entityType === 'terrain') {
+    return terrains.value.map((terrain) => ({ id: terrain.id, label: terrain.name }));
+  }
+
+  if (linkForm.value.entityType === 'customer') {
+    return customers.value.map((customer) => ({ id: customer.id, label: customer.name }));
+  }
+
+  if (linkForm.value.entityType === 'parcel') {
+    return parcels.value.map((parcel) => ({ id: parcel.id, label: parcel.label }));
+  }
+
+  return contracts.value.map((contract) => ({
+    id: contract.id,
+    label: contract.contractNumber || `Contrat ${contract.id.slice(0, 8)}`,
+  }));
+});
+
+function openLink(doc: any) {
+  linkingDocumentId.value = doc.id;
+  linkError.value = null;
+  linkForm.value = {
+    entityType: 'terrain',
+    entityId: '',
+  };
+}
+
+function closeLink() {
+  linkingDocumentId.value = null;
+  linkSaving.value = false;
+  linkError.value = null;
+}
+
+function parseApiError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
+async function saveLink() {
+  if (!linkingDocumentId.value) return;
+  if (!linkForm.value.entityId) {
+    linkError.value = 'Veuillez sélectionner une entité.';
+    return;
+  }
+
+  linkSaving.value = true;
+  linkError.value = null;
+  try {
+    await linkDocument(linkingDocumentId.value, linkForm.value.entityType, linkForm.value.entityId);
+    await loadDocuments();
+    closeLink();
+  } catch (error) {
+    console.error('Erreur liaison document:', error);
+    linkError.value = parseApiError(error, 'Erreur lors de la liaison du document.');
+  } finally {
+    linkSaving.value = false;
+  }
 }
 
 function closeEdit() {
@@ -231,6 +321,9 @@ async function deleteDoc(doc: any) {
 
         <div class="document-actions">
              <div style="display:flex; gap:0.5rem; margin-bottom: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" @click="openLink(doc)" title="Lier">
+                  Lier
+                </button>
                 <button class="btn btn-secondary btn-sm" @click="openEdit(doc)" title="Modifier">
                   <Pencil class="h-3.5 w-3.5" :stroke-width="1.5" />
                 </button>
@@ -257,6 +350,53 @@ async function deleteDoc(doc: any) {
 
     <!-- EDIT MODAL -->
     <Teleport to="body">
+      <div v-if="linkingDocumentId" class="modal-overlay" @click.self="closeLink">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h2 class="modal-title">Lier document</h2>
+            <button class="modal-close" @click="closeLink">x</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Type d'entité</label>
+              <select class="input" v-model="linkForm.entityType">
+                <option value="terrain">Terrain</option>
+                <option value="customer">Client</option>
+                <option value="parcel">Parcelle</option>
+                <option value="contract">Contrat</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Entité</label>
+              <select class="input" v-model="linkForm.entityId">
+                <option value="">Sélectionner</option>
+                <option
+                  v-for="entity in selectedEntityOptions"
+                  :key="entity.id"
+                  :value="entity.id"
+                >
+                  {{ entity.label }}
+                </option>
+              </select>
+            </div>
+
+            <div
+              v-if="linkError"
+              style="padding:var(--space-sm) var(--space-md);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.875rem;white-space:pre-wrap;"
+            >
+              {{ linkError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeLink">Annuler</button>
+            <button class="btn btn-primary" @click="saveLink" :disabled="linkSaving">
+              {{ linkSaving ? 'Liaison...' : 'Lier' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="editingDocumentId" class="modal-overlay" @click.self="closeEdit">
         <div class="modal-container">
           <div class="modal-header">
