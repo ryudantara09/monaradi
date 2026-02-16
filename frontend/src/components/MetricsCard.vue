@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Component } from 'vue';
-import { TrendingUp, TrendingDown } from 'lucide-vue-next';
 
 const props = defineProps<{
   title: string;
@@ -36,17 +34,17 @@ const progressBgClass = computed(() => {
 </script>
 
 <template>
-  <div class="relative bg-card border border-border rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:border-primary/50 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] group h-full flex flex-col justify-between">
-    <div class="flex justify-between items-start mb-4">
+  <div class="relative bg-card border border-border rounded-2xl px-4 py-3 overflow-hidden transition-all duration-200 hover:border-primary/50 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] group h-full flex flex-col justify-between">
+    <div class="flex justify-between items-start mb-2">
       <div>
         <p class="text-sm font-medium text-muted-foreground uppercase tracking-wide">{{ title }}</p>
-        <h3 class="text-3xl font-bold text-foreground mt-2 tracking-tight leading-none">{{ value }}</h3>
+        <h4 class="text text-foreground mt-1 tracking-tight">{{ value }}</h4>
       </div>
       <div 
-        class="h-10 w-10 rounded-xl flex items-center justify-center transition-colors border"
+        class="h-8 w-8 rounded-lg flex items-center justify-center transition-colors border"
         :class="[statusClass]"
       >
-        <component :is="icon" class="h-5 w-5" />
+        <component :is="icon" class="h-3.5 w-3.5" />
       </div>
     </div>
     
@@ -58,7 +56,7 @@ const progressBgClass = computed(() => {
       ></div>
     </div>
     
-    <div v-if="trend !== undefined" class="mt-4 flex items-center gap-2 text-xs font-medium">
+    <div v-if="trend !== undefined" class="mt-2 flex items-center gap-2 text-xs font-medium">
       <div 
         class="px-2 py-0.5 rounded-full flex items-center gap-1"
         :class="trend > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'"
@@ -66,7 +64,6 @@ const progressBgClass = computed(() => {
         <component :is="trend > 0 ? 'TrendingUp' : 'TrendingDown'" class="h-3 w-3" />
         <span>{{ Math.abs(trend) }}%</span>
       </div>
-      <span class="text-muted-foreground">vs mois dernier</span>
     </div>
   </div>
 </template>

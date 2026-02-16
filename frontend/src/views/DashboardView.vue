@@ -1,72 +1,63 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import MetricsCard from '@/components/MetricsCard.vue';
-import { Button } from '@/components/ui/button';
-import { LandPlot, Users, FileText, Plus, User as UserIcon, CheckCircle2 } from '@/lib/icons';
-import type { Component } from 'vue';
-import { fetchTerrains, fetchCustomers, fetchContracts } from '@/services/api';
+import {
+  LandPlot,
+  Square,
+  Users,
+  FileText,
+  FolderOpen,
+  Plus,
+} from '@/lib/icons';
+import {
+  fetchTerrains,
+  fetchParcels,
+  fetchCustomers,
+  fetchContracts,
+  fetchDocuments,
+} from '@/services/api';
 import type { Terrain, Customer, Contract } from '@/types';
 
-interface Activity {
+interface DashboardItem {
   id: string;
-  type: 'terrain' | 'customer' | 'contract';
-  action: string;
   name: string;
-  date: string;
-  icon: Component;
+  to: string;
 }
 
-const stats = ref({ terrains: 0, customers: 0, contracts: 0, activeContracts: 0 });
-const activities = ref<Activity[]>([]);
+interface DashboardCard {
+  key: string;
+  title: string;
+  total: number;
+  listRoute: string;
+  createRoute: string;
+  createLabel: string;
+  icon: object;
+  items: DashboardItem[];
+}
+
 const loading = ref(true);
+
+const terrains = ref<Terrain[]>([]);
+const parcels = ref<any[]>([]);
+const customers = ref<Customer[]>([]);
+const contracts = ref<Contract[]>([]);
+const documents = ref<any[]>([]);
 
 onMounted(async () => {
   try {
-    const [terrains, customers, contracts] = await Promise.all([
+    const [terrainsData, parcelsData, customersData, contractsData, documentsData] = await Promise.all([
       fetchTerrains(),
+      fetchParcels(),
       fetchCustomers(),
       fetchContracts(),
+      fetchDocuments(),
     ]);
 
-    stats.value = {
-      terrains: terrains.length,
-      customers: customers.length,
-      contracts: contracts.length,
-      activeContracts: contracts.filter((c: Contract) => c.status === 'active').length,
-    };
-
-    // Build recent activity
-    const allActivities: Activity[] = [
-      ...terrains.map((t: Terrain) => ({
-        id: t.id,
-        type: 'terrain' as const,
-        action: 'Terrain ajouté',
-        name: t.name,
-        date: t.createdAt,
-        icon: LandPlot,
-      })),
-      ...customers.map((c: Customer) => ({
-        id: c.id,
-        type: 'customer' as const,
-        action: 'Client ajouté',
-        name: c.name,
-        date: c.createdAt,
-        icon: UserIcon,
-      })),
-      ...contracts.map((c: Contract) => ({
-        id: c.id,
-        type: 'contract' as const,
-        action: 'Contrat créé',
-        name: c.contractNumber || 'Sans numéro',
-        date: c.createdAt,
-        icon: FileText,
-      })),
-    ];
-
-    allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    activities.value = allActivities.slice(0, 8);
+    terrains.value = terrainsData;
+    parcels.value = parcelsData;
+    customers.value = customersData;
+    contracts.value = contractsData;
+    documents.value = documentsData;
   } catch (err) {
     console.error('Erreur chargement tableau de bord:', err);
   } finally {
@@ -74,141 +65,180 @@ onMounted(async () => {
   }
 });
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+function sortByDateDesc<T>(items: T[], getDate: (item: T) => string | undefined): T[] {
+  return [...items].sort(
+    (a, b) => new Date(getDate(b) || 0).getTime() - new Date(getDate(a) || 0).getTime(),
+  );
 }
+
+const dashboardCards = computed<DashboardCard[]>(() => {
+  const terrainItems: DashboardItem[] = sortByDateDesc(terrains.value, t => t.createdAt)
+    .slice(0, 8)
+    .map(t => ({
+      id: t.id,
+      name: t.name,
+      to: `/terrains/${t.id}`,
+    }));
+
+  const parcelItems: DashboardItem[] = sortByDateDesc(parcels.value, p => p.createdAt)
+    .slice(0, 8)
+    .map(p => ({
+      id: p.id,
+      name: p.label || 'Parcelle sans nom',
+      to: `/parcelles/${p.id}`,
+    }));
+
+  const customerItems: DashboardItem[] = sortByDateDesc(customers.value, c => c.createdAt)
+    .slice(0, 8)
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      to: `/clients/${c.id}`,
+    }));
+
+  const contractItems: DashboardItem[] = sortByDateDesc(contracts.value, c => c.createdAt)
+    .slice(0, 8)
+    .map(c => ({
+      id: c.id,
+      name: c.contractNumber || `#${c.id.slice(0, 8)}`,
+      to: `/contrats/${c.id}`,
+    }));
+
+  const documentItems: DashboardItem[] = sortByDateDesc(documents.value, d => d.createdAt || d.uploadedAt)
+    .slice(0, 8)
+    .map(d => ({
+      id: d.id,
+      name: d.name || 'Document sans nom',
+      to: '/documents',
+    }));
+
+  return [
+    {
+      key: 'terrains',
+      title: 'Terrains',
+      total: terrains.value.length,
+      listRoute: '/terrains',
+      createRoute: '/terrains/nouveau',
+      createLabel: 'Créer nouveau terrain',
+      icon: LandPlot,
+      items: terrainItems,
+    },
+    {
+      key: 'parcelles',
+      title: 'Parcelles',
+      total: parcels.value.length,
+      listRoute: '/parcelles',
+      createRoute: '/terrains',
+      createLabel: 'Créer nouvelle parcelle',
+      icon: Square,
+      items: parcelItems,
+    },
+    {
+      key: 'clients',
+      title: 'Clients',
+      total: customers.value.length,
+      listRoute: '/clients',
+      createRoute: '/clients/nouveau',
+      createLabel: 'Créer nouveau client',
+      icon: Users,
+      items: customerItems,
+    },
+    {
+      key: 'contrats',
+      title: 'Contrats',
+      total: contracts.value.length,
+      listRoute: '/contrats',
+      createRoute: '/contrats/nouveau',
+      createLabel: 'Créer nouveau contrat',
+      icon: FileText,
+      items: contractItems,
+    },
+    {
+      key: 'documents',
+      title: 'Documents',
+      total: documents.value.length,
+      listRoute: '/documents',
+      createRoute: '/documents',
+      createLabel: 'Créer nouveau document',
+      icon: FolderOpen,
+      items: documentItems,
+    },
+  ];
+});
 </script>
 
 <template>
-  <div class="space-y-8 animate-fade-in">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-        <p class="text-muted-foreground mt-1">Aperçu de votre système de gestion foncière</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <Button as-child>
-          <RouterLink to="/terrains/nouveau">
-            <Plus class="mr-2 h-4 w-4" />
-            Ajout Rapide
+  <div class="space-y-6 animate-fade-in">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Tableau de bord</h1>
+      <p class="text-muted-foreground mt-1">Aperçu de votre système de gestion foncière</p>
+    </div>
+
+    <div v-if="loading" class="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+      Chargement des cartes du tableau de bord...
+    </div>
+
+    <div v-else>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div
+        v-for="card in dashboardCards"
+        :key="card.key"
+        class="rounded-xl border bg-card text-card-foreground shadow-sm flex flex-col"
+      >
+        <div class="p-4 border-b space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <RouterLink
+              :to="card.listRoute"
+              class="text-base font-semibold hover:text-primary transition-colors"
+            >
+              {{ card.title }}
+            </RouterLink>
+            <div class="h-9 w-9 rounded-lg border bg-muted/40 flex items-center justify-center">
+              <component :is="card.icon" class="h-4 w-4 text-muted-foreground" :stroke-width="1.5" />
+            </div>
+          </div>
+
+          <div class="text-2xl font-bold leading-none">{{ card.total }}</div>
+        </div>
+
+        <div class="p-4 flex-1">
+          <div v-if="card.items.length" class="space-y-2">
+            <RouterLink
+              v-for="item in card.items"
+              :key="`${card.key}-${item.id}`"
+              :to="item.to"
+              class="block rounded-md px-2 py-2 hover:bg-muted/60 transition-colors no-underline"
+            >
+              <span class="block text-base font-semibold leading-tight w-full truncate">{{ item.name }}</span>
+            </RouterLink>
+          </div>
+          <div v-else class="text-sm text-muted-foreground">
+            Aucun élément existant.
+          </div>
+        </div>
+
+        <div class="p-4 border-t">
+          <RouterLink
+            :to="card.createRoute"
+            class="flex items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium hover:bg-muted/60 hover:border-primary/50 transition-colors"
+          >
+            <Plus class="h-4 w-4" :stroke-width="1.5" />
+            {{ card.createLabel }}
           </RouterLink>
-        </Button>
-      </div>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-      <!-- Terrains Card -->
-      <RouterLink to="/terrains" class="block group no-underline">
-        <MetricsCard 
-          title="Terrains"
-          :value="stats.terrains"
-          :icon="LandPlot"
-          status="info"
-          :progress="75"
-          :trend="12"
-          class="h-full"
-        />
-      </RouterLink>
-
-      <!-- Clients Card -->
-      <RouterLink to="/clients" class="block group no-underline">
-        <MetricsCard 
-          title="Clients"
-          :value="stats.customers"
-          :icon="Users"
-          status="warning"
-          :progress="60"
-          :trend="5"
-          class="h-full"
-        />
-      </RouterLink>
-
-      <!-- Active Contracts Card -->
-      <RouterLink to="/contrats" class="block group no-underline">
-        <MetricsCard 
-          title="Contrats Actifs"
-          :value="stats.activeContracts"
-          :icon="CheckCircle2"
-          status="success"
-          :progress="88"
-          :trend="24"
-          class="h-full"
-        />
-      </RouterLink>
-
-      <!-- Total Contracts Card -->
-      <RouterLink to="/contrats" class="block group no-underline">
-        <MetricsCard 
-          title="Total Contrats"
-          :value="stats.contracts"
-          :icon="FileText"
-          status="info"
-          :progress="45"
-          :trend="-2"
-          class="h-full"
-        />
-      </RouterLink>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-      <!-- Activity Feed (Col span 4) -->
-      <div class="col-span-4 rounded-xl border bg-card text-card-foreground shadow-sm">
-        <div class="p-6 flex flex-col space-y-1.5">
-          <h3 class="font-semibold leading-none tracking-tight">Activité Récente</h3>
-          <p class="text-sm text-muted-foreground">Derniers événements sur la plateforme</p>
-        </div>
-        <div class="p-6 pt-0">
-           <div v-if="loading" class="flex items-center justify-center py-8">
-             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-           </div>
-           <div v-else-if="activities.length === 0" class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-             <FileText class="h-12 w-12 mb-4 opacity-50" :stroke-width="1.5" />
-             <p>Aucune activité récente</p>
-           </div>
-           <div v-else class="space-y-4">
-             <div v-for="activity in activities" :key="activity.id" class="flex items-center">
-                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground mr-4">
-                  <component :is="activity.icon" class="h-4 w-4" :stroke-width="1.5" />
-                </span>
-                <div class="space-y-1">
-                  <p class="text-sm font-medium leading-none">{{ activity.name }}</p>
-                  <p class="text-xs text-muted-foreground">{{ activity.action }}</p>
-                </div>
-                <div class="ml-auto font-medium text-xs text-muted-foreground">{{ formatDate(activity.date) }}</div>
-             </div>
-           </div>
+          <p
+            v-if="card.key === 'parcelles'"
+            class="mt-2 text-xs text-muted-foreground"
+          >
+            La création de parcelles se fait depuis un terrain.
+          </p>
+          <p
+            v-if="card.key === 'documents'"
+            class="mt-2 text-xs text-muted-foreground"
+          >
+            La création de documents se fait via les écrans de gestion de documents existants.
+          </p>
         </div>
       </div>
-
-      <!-- Quick Actions / Summary (Col span 3) -->
-      <div class="col-span-3 space-y-4">
-         <!-- Quick Actions -->
-         <div class="rounded-xl border bg-card text-card-foreground shadow-sm">
-            <div class="p-6 flex flex-col space-y-1.5">
-              <h3 class="font-semibold leading-none tracking-tight">Actions Rapides</h3>
-            </div>
-            <div class="p-6 pt-0 grid grid-cols-2 gap-2">
-                <RouterLink to="/terrains/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
-                  <LandPlot class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
-                  <span class="text-xs font-medium">Nouveau Terrain</span>
-                </RouterLink>
-                <RouterLink to="/clients/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center">
-                  <UserIcon class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
-                  <span class="text-xs font-medium">Nouveau Client</span>
-                </RouterLink>
-                 <RouterLink to="/contrats/nouveau" class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-dashed hover:bg-muted/50 hover:border-primary/50 transition-colors text-center col-span-2">
-                  <FileText class="h-6 w-6 text-muted-foreground" :stroke-width="1.5" />
-                  <span class="text-xs font-medium">Créer un Contrat</span>
-                </RouterLink>
-            </div>
-         </div>
       </div>
     </div>
   </div>

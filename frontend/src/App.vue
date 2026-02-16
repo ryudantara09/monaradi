@@ -13,14 +13,24 @@ import {
   Search, 
   Plus, 
   Settings, 
-  LogOut, 
-  ChevronDown 
+  LogOut 
 } from '@/lib/icons';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useThemeMode, type ThemeMode } from '@/composables/useThemeMode';
 import type { Component } from 'vue';
 
 const route = useRoute();
 const sidebarOpen = ref(false);
+const { mode: themeMode, setMode } = useThemeMode();
 
 interface NavItem {
   path: string;
@@ -49,6 +59,12 @@ function closeSidebar() {
 function isActive(path: string, exact?: boolean): boolean {
   if (exact) return route.path === path;
   return route.path.startsWith(path);
+}
+
+function onThemeModeChange(value: string | null | undefined) {
+  if (value === 'light' || value === 'dark' || value === 'system') {
+    setMode(value as ThemeMode);
+  }
 }
 </script>
 
@@ -131,7 +147,7 @@ function isActive(path: string, exact?: boolean): boolean {
     <!-- Main Content Wrapper -->
     <div class="flex-1 flex flex-col min-h-screen md:ml-[280px] transition-all duration-300">
       <!-- Top Header -->
-      <header class="h-16 sticky top-0 z-20 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/60 border-b border-sidebar-border flex items-center justify-between px-6 gap-4">
+      <header class="h-16 sticky top-0 z-20 bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/60 border-b border-sidebar-border flex items-center justify-between px-4 md:px-6 gap-3 md:gap-4">
         <!-- Search -->
         <div class="flex-1 max-w-xl mx-auto hidden md:block">
           <div class="relative group">
@@ -150,9 +166,22 @@ function isActive(path: string, exact?: boolean): boolean {
             <Search class="h-5 w-5" />
           </button>
           
-          <button class="p-2 text-muted-foreground hover:text-foreground relative">
-             <Settings class="h-5 w-5" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <button class="p-2 text-muted-foreground hover:text-foreground relative" aria-label="Choisir le mode d'affichage">
+                <Settings class="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-44">
+              <DropdownMenuLabel>Apparence</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup :model-value="themeMode" @update:model-value="onThemeModeChange">
+                <DropdownMenuRadioItem value="light">Clair</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">Sombre</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">Système</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <button class="bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(76,167,88,0.25)] flex items-center gap-2">
             <Plus class="h-4 w-4" />
@@ -162,7 +191,7 @@ function isActive(path: string, exact?: boolean): boolean {
       </header>
 
       <!-- Main Content Area -->
-      <main class="flex-1 p-6 md:p-8 bg-background overflow-x-hidden">
+      <main class="flex-1 p-4 sm:p-5 md:p-8 bg-background overflow-x-hidden">
         <RouterView />
       </main>
     </div>
