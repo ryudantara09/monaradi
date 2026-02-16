@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { fetchContract, deleteContract } from '@/services/api';
+import { fetchContract, deleteContract, fetchDocuments, linkDocument } from '@/services/api';
 import { FileText, Trash2, Hash, Calendar, User, Phone, Users, LandPlot, Image, File, XCircle } from '@/lib/icons';
 
 const route = useRoute();
 const router = useRouter();
 const contract = ref<any>(null);
 const loading = ref(true);
+const availableDocuments = ref<any[]>([]);
+const selectedDocumentIds = ref<string[]>([]);
+const linkingDocuments = ref(false);
+const linkDocumentsError = ref<string | null>(null);
+const showLinkDocumentsModal = ref(false);
 
 onMounted(async () => {
   const id = route.params.id as string;
   try {
-    contract.value = await fetchContract(id);
+    const [loadedContract, docs] = await Promise.all([
+      fetchContract(id),
+      fetchDocuments(),
+    ]);
+    contract.value = loadedContract;
+    availableDocuments.value = docs;
   } catch (err) {
     console.error('Erreur chargement contrat:', err);
   } finally {
@@ -38,6 +48,66 @@ function formatDate(dateStr: string | null | undefined): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+const linkableDocuments = computed(() => {
+  const linkedIds = new Set((contract.value?.documents || []).map((item: any) => item.documentId));
+  return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
+});
+
+function toggleDocumentSelection(documentId: string, checked: boolean) {
+  if (checked) {
+    if (!selectedDocumentIds.value.includes(documentId)) {
+      selectedDocumentIds.value.push(documentId);
+    }
+    return;
+  }
+
+  selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => id !== documentId);
+}
+
+function parseLinkError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
+async function handleLinkSelectedDocuments() {
+  if (!contract.value?.id) return;
+  if (selectedDocumentIds.value.length === 0) {
+    linkDocumentsError.value = 'Sélectionnez au moins un document à lier.';
+    return;
+  }
+
+  linkingDocuments.value = true;
+  linkDocumentsError.value = null;
+  try {
+    await Promise.all(
+      selectedDocumentIds.value.map((documentId) => linkDocument(documentId, 'contract', contract.value.id))
+    );
+
+    const [updatedContract, docs] = await Promise.all([
+      fetchContract(contract.value.id),
+      fetchDocuments(),
+    ]);
+    contract.value = updatedContract;
+    availableDocuments.value = docs;
+    selectedDocumentIds.value = [];
+    showLinkDocumentsModal.value = false;
+  } catch (error) {
+    console.error('Erreur liaison documents contrat:', error);
+    linkDocumentsError.value = parseLinkError(error, 'Erreur lors de la liaison des documents.');
+  } finally {
+    linkingDocuments.value = false;
+  }
+}
+
+function openLinkDocumentsModal() {
+  linkDocumentsError.value = null;
+  showLinkDocumentsModal.value = true;
+}
+
+function closeLinkDocumentsModal() {
+  showLinkDocumentsModal.value = false;
+  linkDocumentsError.value = null;
 }
 </script>
 
@@ -124,6 +194,10 @@ function formatDate(dateStr: string | null | undefined): string {
                 :key="parcel.id"
                 class="related-item"
               >
+                <RouterLink
+                  :to="`/parcelles/${parcel.id}`"
+                  class="related-item"
+                >
                 <LandPlot class="h-4 w-4" :stroke-width="1.5" />
                 <div style="flex:1">
                   <div style="font-weight:600">{{ parcel.label || '—' }}</div>
@@ -134,6 +208,7 @@ function formatDate(dateStr: string | null | undefined): string {
                     Surface: {{ parcel.areaSqm.toFixed(2) }} m²
                   </div>
                 </div>
+                </RouterLink>
               </div>
             </div>
           </template>
@@ -189,6 +264,12 @@ function formatDate(dateStr: string | null | undefined): string {
             <File class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun document associé</p>
           </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
+            <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
+              Lier documents
+            </button>
+          </div>
         </div>
 
         <!-- Notes -->
@@ -211,5 +292,106 @@ function formatDate(dateStr: string | null | undefined): string {
       <p class="empty-state-title">Contrat introuvable</p>
       <RouterLink to="/contrats" class="btn btn-primary">Retour aux Contrats</RouterLink>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showLinkDocumentsModal" class="modal-overlay" @click.self="closeLinkDocumentsModal">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h2 class="modal-title"><FileText class="h-4 w-4" :stroke-width="1.5" /> Lier des documents</h2>
+            <button class="modal-close" @click="closeLinkDocumentsModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin:0;color:var(--muted-foreground);font-size:0.875rem;">
+              Sélectionnez les documents existants à lier à ce contrat.
+            </p>
+            <div v-if="linkableDocuments.length > 0" style="display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-sm);">
+              <label v-for="doc in linkableDocuments" :key="doc.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+                <input
+                  type="checkbox"
+                  :checked="selectedDocumentIds.includes(doc.id)"
+                  @change="toggleDocumentSelection(doc.id, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ doc.name }}</span>
+              </label>
+            </div>
+            <p v-else style="margin:0;color:var(--muted-foreground);font-size:0.8125rem;">Aucun document disponible à lier.</p>
+
+            <div v-if="linkDocumentsError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;">
+              {{ linkDocumentsError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeLinkDocumentsModal">Annuler</button>
+            <button class="btn btn-primary" :disabled="linkingDocuments" @click="handleLinkSelectedDocuments">
+              {{ linkingDocuments ? 'Liaison...' : 'Lier la sélection' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+</style>

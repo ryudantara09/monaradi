@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { fetchCustomer, updateCustomer, deleteCustomer } from '@/services/api';
+import { fetchCustomer, updateCustomer, deleteCustomer, fetchDocuments, linkDocument } from '@/services/api';
 import type { Customer } from '@/types';
 import { User, Building2, Square, DollarSign, LandPlot, Mail, Phone, MapPin, Pencil, Trash2, FileText, XCircle } from '@/lib/icons';
 
@@ -11,13 +11,23 @@ const customer = ref<any>(null);
 const isEditing = ref(false);
 const saving = ref(false);
 const loading = ref(true);
+const availableDocuments = ref<any[]>([]);
+const selectedDocumentIds = ref<string[]>([]);
+const linkingDocuments = ref(false);
+const linkDocumentsError = ref<string | null>(null);
+const showLinkDocumentsModal = ref(false);
 
 const formData = ref<Partial<Customer>>({});
 
 onMounted(async () => {
   const id = route.params.id as string;
   try {
-    customer.value = await fetchCustomer(id);
+    const [loadedCustomer, docs] = await Promise.all([
+      fetchCustomer(id),
+      fetchDocuments(),
+    ]);
+    customer.value = loadedCustomer;
+    availableDocuments.value = docs;
     formData.value = { ...customer.value };
   } catch (err) {
     console.error('Erreur chargement client:', err);
@@ -128,6 +138,65 @@ const parcelsByTerrain = computed(() => {
   }
   return Array.from(terrainMap.values());
 });
+
+const linkableDocuments = computed(() => {
+  const linkedIds = new Set((customer.value?.documents || []).map((item: any) => item.documentId));
+  return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
+});
+
+function toggleDocumentSelection(documentId: string, checked: boolean) {
+  if (checked) {
+    if (!selectedDocumentIds.value.includes(documentId)) {
+      selectedDocumentIds.value.push(documentId);
+    }
+    return;
+  }
+
+  selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => id !== documentId);
+}
+
+function parseLinkError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
+async function handleLinkSelectedDocuments() {
+  if (!customer.value?.id) return;
+  if (selectedDocumentIds.value.length === 0) {
+    linkDocumentsError.value = 'Sélectionnez au moins un document à lier.';
+    return;
+  }
+
+  linkingDocuments.value = true;
+  linkDocumentsError.value = null;
+  try {
+    await Promise.all(
+      selectedDocumentIds.value.map((documentId) => linkDocument(documentId, 'customer', customer.value.id))
+    );
+
+    const [updatedCustomer, docs] = await Promise.all([
+      fetchCustomer(customer.value.id),
+      fetchDocuments(),
+    ]);
+    customer.value = updatedCustomer;
+    availableDocuments.value = docs;
+    selectedDocumentIds.value = [];
+  } catch (error) {
+    console.error('Erreur liaison documents client:', error);
+    linkDocumentsError.value = parseLinkError(error, 'Erreur lors de la liaison des documents.');
+  } finally {
+    linkingDocuments.value = false;
+  }
+}
+
+function openLinkDocumentsModal() {
+  linkDocumentsError.value = null;
+  showLinkDocumentsModal.value = true;
+}
+
+function closeLinkDocumentsModal() {
+  showLinkDocumentsModal.value = false;
+  linkDocumentsError.value = null;
+}
 
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -425,6 +494,12 @@ function statusColor(status: string): string {
             <FileText class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
             <p>Aucun document associé</p>
           </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
+            <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
+              Lier documents
+            </button>
+          </div>
         </div>
 
         <!-- Notes -->
@@ -455,5 +530,106 @@ function statusColor(status: string): string {
       <p class="empty-state-title">Client introuvable</p>
       <RouterLink to="/clients" class="btn btn-primary">Retour aux Clients</RouterLink>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showLinkDocumentsModal" class="modal-overlay" @click.self="closeLinkDocumentsModal">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h2 class="modal-title"><FileText class="h-4 w-4" :stroke-width="1.5" /> Lier des documents</h2>
+            <button class="modal-close" @click="closeLinkDocumentsModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin:0;color:var(--muted-foreground);font-size:0.875rem;">
+              Sélectionnez les documents existants à lier à ce client.
+            </p>
+            <div v-if="linkableDocuments.length > 0" style="display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-sm);">
+              <label v-for="doc in linkableDocuments" :key="doc.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+                <input
+                  type="checkbox"
+                  :checked="selectedDocumentIds.includes(doc.id)"
+                  @change="toggleDocumentSelection(doc.id, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ doc.name }}</span>
+              </label>
+            </div>
+            <p v-else style="margin:0;color:var(--muted-foreground);font-size:0.8125rem;">Aucun document disponible à lier.</p>
+
+            <div v-if="linkDocumentsError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;">
+              {{ linkDocumentsError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeLinkDocumentsModal">Annuler</button>
+            <button class="btn btn-primary" :disabled="linkingDocuments" @click="handleLinkSelectedDocuments">
+              {{ linkingDocuments ? 'Liaison...' : 'Lier la sélection' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+</style>

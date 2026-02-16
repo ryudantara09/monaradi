@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract } from '@/services/api';
+import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract, fetchDocuments, linkDocument } from '@/services/api';
 import TerrainEditorView from '@/views/TerrainEditorView.vue';
 import { LandPlot, Square, User, Building2, Pencil, Trash2, FileText, MapPin, XCircle, AlertCircle, File, Plus } from '@/lib/icons';
 
@@ -15,6 +15,11 @@ const terrain = ref<any>(null);
 const isEditing = ref(false);
 const saving = ref(false);
 const loading = ref(true);
+const availableDocuments = ref<any[]>([]);
+const selectedDocumentIds = ref<string[]>([]);
+const linkingDocuments = ref(false);
+const linkDocumentsError = ref<string | null>(null);
+const showLinkDocumentsModal = ref(false);
 
 const formData = ref<any>({});
 
@@ -182,12 +187,14 @@ async function handleDeleteParcel(parcel: any) {
 onMounted(async () => {
   const id = route.params.id as string;
   try {
-    const [t, c] = await Promise.all([
+    const [t, c, docs] = await Promise.all([
       fetchTerrain(id),
       fetchCustomers(),
+      fetchDocuments(),
     ]);
     terrain.value = t;
     customers.value = c;
+    availableDocuments.value = docs;
     formData.value = { ...terrain.value };
   } catch (err) {
     console.error('Erreur chargement terrain:', err);
@@ -298,6 +305,65 @@ const contractsFromParcels = computed(() => {
     new Date(b.contract?.createdAt || 0).getTime() - new Date(a.contract?.createdAt || 0).getTime()
   );
 });
+
+const linkableDocuments = computed(() => {
+  const linkedIds = new Set((terrain.value?.documents || []).map((item: any) => item.documentId));
+  return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
+});
+
+function toggleDocumentSelection(documentId: string, checked: boolean) {
+  if (checked) {
+    if (!selectedDocumentIds.value.includes(documentId)) {
+      selectedDocumentIds.value.push(documentId);
+    }
+    return;
+  }
+
+  selectedDocumentIds.value = selectedDocumentIds.value.filter((id) => id !== documentId);
+}
+
+function parseLinkError(error: any, fallback: string): string {
+  return error?.response?.data?.error || fallback;
+}
+
+async function handleLinkSelectedDocuments() {
+  if (!terrain.value?.id) return;
+  if (selectedDocumentIds.value.length === 0) {
+    linkDocumentsError.value = 'Sélectionnez au moins un document à lier.';
+    return;
+  }
+
+  linkingDocuments.value = true;
+  linkDocumentsError.value = null;
+  try {
+    await Promise.all(
+      selectedDocumentIds.value.map((documentId) => linkDocument(documentId, 'terrain', terrain.value.id))
+    );
+
+    const [updatedTerrain, docs] = await Promise.all([
+      fetchTerrain(terrain.value.id),
+      fetchDocuments(),
+    ]);
+    terrain.value = updatedTerrain;
+    availableDocuments.value = docs;
+    selectedDocumentIds.value = [];
+  } catch (error) {
+    console.error('Erreur liaison documents terrain:', error);
+    linkDocumentsError.value = parseLinkError(error, 'Erreur lors de la liaison des documents.');
+  } finally {
+    linkingDocuments.value = false;
+  }
+}
+
+function openLinkDocumentsModal() {
+  linkDocumentsError.value = null;
+  showLinkDocumentsModal.value = true;
+}
+
+function closeLinkDocumentsModal() {
+  showLinkDocumentsModal.value = false;
+  linkDocumentsError.value = null;
+}
 
 // Distinct buyers for this terrain
 const parcelBuyers = computed(() => {
@@ -663,6 +729,12 @@ function paymentLabel(status: string): string {
             <span><File class="h-4 w-4 inline" :stroke-width="1.5" /></span>
             <p>Aucun document associé</p>
           </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
+            <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
+              Lier documents
+            </button>
+          </div>
         </div>
 
         <!-- Location -->
@@ -738,6 +810,41 @@ function paymentLabel(status: string): string {
     <!-- PARCEL ADD/EDIT MODAL -->
     <!-- ============================================ -->
     <Teleport to="body">
+      <div v-if="showLinkDocumentsModal" class="modal-overlay" @click.self="closeLinkDocumentsModal">
+        <div class="modal-container" style="max-width:760px;">
+          <div class="modal-header">
+            <h2 class="modal-title"><FileText class="h-4 w-4" :stroke-width="1.5" /> Lier des documents</h2>
+            <button class="modal-close" @click="closeLinkDocumentsModal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin:0;color:var(--color-text-muted);font-size:0.875rem;">
+              Sélectionnez les documents existants à lier à ce terrain.
+            </p>
+            <div v-if="linkableDocuments.length > 0" style="display:flex;flex-direction:column;gap:0.35rem;max-height:300px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-sm);">
+              <label v-for="doc in linkableDocuments" :key="doc.id" style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+                <input
+                  type="checkbox"
+                  :checked="selectedDocumentIds.includes(doc.id)"
+                  @change="toggleDocumentSelection(doc.id, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ doc.name }}</span>
+              </label>
+            </div>
+            <p v-else style="margin:0;color:var(--color-text-muted);font-size:0.8125rem;">Aucun document disponible à lier.</p>
+
+            <div v-if="linkDocumentsError" style="padding:var(--space-sm);border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);border-radius:var(--radius-md);color:#ef4444;font-size:0.8125rem;">
+              {{ linkDocumentsError }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="closeLinkDocumentsModal">Annuler</button>
+            <button class="btn btn-primary" :disabled="linkingDocuments" @click="handleLinkSelectedDocuments">
+              {{ linkingDocuments ? 'Liaison...' : 'Lier la sélection' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="showParcelModal" class="modal-overlay" @click.self="closeParcelModal">
         <div class="modal-container">
           <div class="modal-header">
