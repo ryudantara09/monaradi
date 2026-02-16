@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchContracts } from '@/services/api';
 import type { Contract } from '@/types';
-import { Search, FileText, LandPlot, Plus } from '@/lib/icons';
+import { Search, FileText, Plus, User, Calendar, Grid3x3, List, LandPlot } from '@/lib/icons';
 
 const contracts = ref<Contract[]>([]);
 const searchQuery = ref('');
+const viewMode = ref<'grid' | 'list'>('grid');
 const loading = ref(true);
 
 onMounted(async () => {
@@ -32,6 +33,11 @@ const filteredContracts = computed(() => {
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('fr-FR');
+}
+
+function formatPrice(price: number | null | undefined): string {
+  if (!price && price !== 0) return '—';
+  return price.toLocaleString('fr-FR', { style: 'currency', currency: 'TND', maximumFractionDigits: 0 });
 }
 </script>
 
@@ -61,6 +67,24 @@ function formatDate(dateStr: string | null | undefined): string {
           v-model="searchQuery"
         />
       </div>
+      <div class="toolbar-actions">
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'grid' }"
+            @click="viewMode = 'grid'"
+          >
+            <Grid3x3 class="h-4 w-4" :stroke-width="1.5" />
+          </button>
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'list' }"
+            @click="viewMode = 'list'"
+          >
+            <List class="h-4 w-4" :stroke-width="1.5" />
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -80,7 +104,50 @@ function formatDate(dateStr: string | null | undefined): string {
       </RouterLink>
     </div>
 
-    <!-- Table -->
+    <div v-else-if="viewMode === 'grid'" class="entity-grid">
+      <RouterLink
+        v-for="contract in filteredContracts"
+        :key="contract.id"
+        :to="`/contrats/${contract.id}`"
+        class="entity-card"
+      >
+        <div class="entity-card-header">
+          <div class="entity-card-avatar">
+            <FileText class="h-5 w-5 text-muted-foreground" :stroke-width="1.5" />
+          </div>
+          <div class="entity-card-info">
+            <div class="entity-card-name">{{ contract.contractNumber || `#${contract.id.slice(0, 8)}` }}</div>
+            <div class="entity-card-sub flex items-center gap-1">
+              <Calendar class="h-3.5 w-3.5" :stroke-width="1.5" />
+              {{ formatDate(contract.createdAt) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="entity-card-meta" style="justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <span class="entity-card-meta-item flex items-center gap-1">
+            <User class="h-3.5 w-3.5" :stroke-width="1.5" />
+            {{ contract.customer?.name || 'Acheteur non défini' }}
+          </span>
+          <span class="entity-card-meta-item" style="font-weight:600;color:var(--foreground)">
+            {{ formatPrice(contract.saleAmount) }}
+          </span>
+        </div>
+
+        <div class="entity-card-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-value">{{ contract.parcels?.length || 0 }}</span>
+            <span class="mini-stat-label">Parcelles</span>
+          </div>
+          <div class="mini-stat" style="align-items:flex-start;flex:1">
+            <span class="mini-stat-label" style="text-transform:none;font-size:0.75rem;letter-spacing:0;color:var(--muted-foreground)">
+              {{ contract.parcels?.length ? contract.parcels.map((parcel) => parcel.label || '—').join(', ') : 'Aucune parcelle liée' }}
+            </span>
+          </div>
+        </div>
+      </RouterLink>
+    </div>
+
     <div v-else class="content-section">
       <table class="table">
         <thead>
@@ -88,28 +155,28 @@ function formatDate(dateStr: string | null | undefined): string {
             <th>N° contrat</th>
             <th>Acheteur</th>
             <th>Parcelles</th>
+            <th>Montant</th>
             <th>Date</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="contract in filteredContracts" :key="contract.id">
             <td>
-              <RouterLink :to="`/contrats/${contract.id}`" class="table-link" style="font-weight: 600">
+              <RouterLink :to="`/contrats/${contract.id}`" class="table-link" style="font-weight:600">
                 {{ contract.contractNumber || `#${contract.id.slice(0, 8)}` }}
               </RouterLink>
             </td>
-            <td>
-              {{ contract.customer?.name || '—' }}
-            </td>
+            <td>{{ contract.customer?.name || '—' }}</td>
             <td>
               <template v-if="contract.parcels?.length">
-                <span v-for="(parcel, i) in contract.parcels" :key="i" class="inline-flex items-center gap-1">
+                <span v-for="(parcel, index) in contract.parcels" :key="parcel.id || index" class="inline-flex items-center gap-1">
                   <LandPlot class="h-3.5 w-3.5 text-muted-foreground" :stroke-width="1.5" />
-                  {{ parcel.label || '—' }}{{ i < contract.parcels.length - 1 ? ', ' : '' }}
+                  {{ parcel.label || '—' }}{{ index < contract.parcels.length - 1 ? ', ' : '' }}
                 </span>
               </template>
               <span v-else class="text-muted-foreground">—</span>
             </td>
+            <td>{{ formatPrice(contract.saleAmount) }}</td>
             <td>{{ formatDate(contract.createdAt) }}</td>
           </tr>
         </tbody>

@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchTerrains } from '@/services/api';
 import type { Terrain } from '@/types';
-import { LandPlot, Search, Grid3x3, List, User, Square, Plus } from '@/lib/icons';
+import { LandPlot, Search, User, Square, Plus, Grid3x3, List } from '@/lib/icons';
 
 const terrains = ref<Terrain[]>([]);
 const searchQuery = ref('');
@@ -156,7 +156,6 @@ function formatArea(terrain: Terrain): string {
       </RouterLink>
     </div>
 
-    <!-- List View -->
     <div v-else class="content-section">
       <table class="table">
         <thead>

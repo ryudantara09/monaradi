@@ -2,12 +2,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { fetchDocuments, updateDocument, deleteDocument, linkDocument, fetchTerrains, fetchCustomers, fetchParcels, fetchContracts } from '@/services/api';
-import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Plus } from '@/lib/icons';
+import { Search, FolderOpen, LandPlot, User, FileText, Square, Pencil, Trash2, File, Plus, Grid3x3, List } from '@/lib/icons';
 
 const router = useRouter();
 
 const documents = ref<any[]>([]);
 const searchQuery = ref('');
+const viewMode = ref<'grid' | 'list'>('grid');
 const selectedType = ref<string>('ALL');
 const loading = ref(true);
 
@@ -289,6 +290,22 @@ function openDocumentDetail(documentId: string) {
       </div>
 
       <div class="toolbar-actions" style="gap: 0.5rem; overflow-x: auto;">
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'grid' }"
+            @click="viewMode = 'grid'"
+          >
+            <Grid3x3 class="h-4 w-4" :stroke-width="1.5" />
+          </button>
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'list' }"
+            @click="viewMode = 'list'"
+          >
+            <List class="h-4 w-4" :stroke-width="1.5" />
+          </button>
+        </div>
         <button
           v-for="type in documentTypes"
           :key="type.value"
@@ -319,7 +336,7 @@ function openDocumentDetail(documentId: string) {
     </div>
 
     <!-- Grid View -->
-    <div v-else class="documents-grid">
+    <div v-else-if="viewMode === 'grid'" class="documents-grid">
       <div
         v-for="doc in filteredDocuments"
         :key="doc.id"
@@ -377,6 +394,45 @@ function openDocumentDetail(documentId: string) {
              </div>
         </div>
       </div>
+    </div>
+
+    <div v-else class="content-section">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Taille</th>
+            <th>Liens</th>
+            <th>Ajouté le</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="doc in filteredDocuments" :key="doc.id">
+            <td>
+              <RouterLink :to="`/documents/${doc.id}`" class="table-link" style="font-weight:600">
+                {{ doc.name }}
+              </RouterLink>
+            </td>
+            <td>{{ doc.type || 'Autre' }}</td>
+            <td>{{ formatSize(doc.sizeBytes) }}</td>
+            <td>{{ getLinkedEntities(doc).length }}</td>
+            <td>{{ formatDate(doc.createdAt) }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" @click="openLink(doc)">Lier</button>
+                <button class="btn btn-secondary btn-sm" @click="openEdit(doc)">
+                  <Pencil class="h-3.5 w-3.5" :stroke-width="1.5" />
+                </button>
+                <button class="btn btn-danger btn-sm" @click="deleteDoc(doc)">
+                  <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- EDIT MODAL -->

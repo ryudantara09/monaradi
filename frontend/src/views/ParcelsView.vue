@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchParcels } from '@/services/api';
-import { Search, Square, MapPin, User, Grid3x3, List, Plus } from '@/lib/icons';
+import { Search, Square, MapPin, User, Plus, Grid3x3, List } from '@/lib/icons';
 
 const parcels = ref<any[]>([]);
 const searchQuery = ref('');
@@ -170,7 +170,6 @@ function statusColor(status: string): string {
       </div>
     </div>
 
-    <!-- List View -->
     <div v-else class="content-section">
       <table class="table">
         <thead>

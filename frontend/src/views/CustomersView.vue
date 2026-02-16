@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { fetchCustomers } from '@/services/api';
 import type { Customer } from '@/types';
-import { Search, User, Mail, Phone, Users, Plus } from '@/lib/icons';
+import { Search, User, Mail, Phone, Users, Plus, Grid3x3, List } from '@/lib/icons';
 
 const customers = ref<Customer[]>([]);
 const searchQuery = ref('');
+const viewMode = ref<'grid' | 'list'>('grid');
 const loading = ref(true);
 
 onMounted(async () => {
@@ -57,10 +58,21 @@ const filteredCustomers = computed(() => {
         />
       </div>
       <div class="toolbar-actions">
-        <div class="filter-tabs">
-          <div class="filter-tab active">
-            Tous les clients ({{ customers.length }})
-          </div>
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'grid' }"
+            @click="viewMode = 'grid'"
+          >
+            <Grid3x3 class="h-4 w-4" :stroke-width="1.5" />
+          </button>
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'list' }"
+            @click="viewMode = 'list'"
+          >
+            <List class="h-4 w-4" :stroke-width="1.5" />
+          </button>
         </div>
       </div>
     </div>
@@ -85,7 +97,7 @@ const filteredCustomers = computed(() => {
     </div>
 
     <!-- Grid -->
-    <div v-else class="entity-grid">
+    <div v-else-if="viewMode === 'grid'" class="entity-grid">
       <RouterLink
         v-for="customer in filteredCustomers"
         :key="customer.id"
@@ -128,6 +140,33 @@ const filteredCustomers = computed(() => {
           </div>
         </div>
       </RouterLink>
+    </div>
+
+    <div v-else class="content-section">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Parcelles</th>
+            <th>Contrats</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="customer in filteredCustomers" :key="customer.id">
+            <td>
+              <RouterLink :to="`/clients/${customer.id}`" class="table-link" style="font-weight:600">
+                {{ customer.name }}
+              </RouterLink>
+            </td>
+            <td>{{ customer.email || '—' }}</td>
+            <td>{{ customer.phone || '—' }}</td>
+            <td>{{ (customer as any)._count?.purchasedParcels || 0 }}</td>
+            <td>{{ customer._count?.contractParties || 0 }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
