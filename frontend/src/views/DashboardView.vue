@@ -225,18 +225,6 @@ const dashboardCards = computed<DashboardCard[]>(() => {
             <Plus class="h-4 w-4" :stroke-width="1.5" />
             {{ card.createLabel }}
           </RouterLink>
-          <p
-            v-if="card.key === 'parcelles'"
-            class="mt-2 text-xs text-muted-foreground"
-          >
-            Sélectionnez le terrain directement dans le formulaire de création.
-          </p>
-          <p
-            v-if="card.key === 'documents'"
-            class="mt-2 text-xs text-muted-foreground"
-          >
-            La création de documents se fait via les écrans de gestion de documents existants.
-          </p>
         </div>
       </div>
       </div>
