@@ -50,6 +50,18 @@ function formatDate(dateStr: string | null | undefined): string {
   });
 }
 
+function formatPrice(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  return value.toLocaleString('fr-FR', {
+    style: 'currency',
+    currency: 'TND',
+    maximumFractionDigits: 0,
+  });
+}
+
+const soldParcels = computed(() => contract.value?.parcels || []);
+const linkedDocuments = computed(() => contract.value?.documents || []);
+
 const linkableDocuments = computed(() => {
   const linkedIds = new Set((contract.value?.documents || []).map((item: any) => item.documentId));
   return availableDocuments.value.filter((doc: any) => !linkedIds.has(doc.id));
@@ -139,14 +151,17 @@ function closeLinkDocumentsModal() {
             <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
             Nouveau document
           </RouterLink>
+          <button class="btn btn-secondary" @click="openLinkDocumentsModal">
+            <File class="h-3.5 w-3.5" :stroke-width="1.5" />
+            Lier documents
+          </button>
           <button class="btn btn-danger" @click="handleDelete"><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer</button>
         </div>
       </header>
 
       <div class="detail-content">
-        <!-- Contract Info -->
         <div class="detail-section">
-          <h2 class="section-title">Détails de la vente</h2>
+          <h2 class="section-title">Informations de base</h2>
           <div class="info-grid">
             <div class="info-item">
               <span class="info-label"><Hash class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> N° contrat</span>
@@ -156,123 +171,119 @@ function closeLinkDocumentsModal() {
               <span class="info-label"><Calendar class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Date de vente</span>
               <span class="info-value">{{ formatDate(contract.createdAt) }}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- Buyer -->
-        <div class="detail-section">
-          <h2 class="section-title">Acheteur</h2>
-          <template v-if="contract.customer">
-            <div class="related-items">
-              <RouterLink
-                :to="`/clients/${contract.customer.id}`"
-                class="related-item"
-              >
-                <User class="h-4 w-4" :stroke-width="1.5" />
-                <div style="flex:1">
-                  <div style="font-weight:600">{{ contract.customer.name || '—' }}</div>
-                  <div v-if="contract.customer.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    <Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ contract.customer.phone }}
-                  </div>
-                </div>
-              </RouterLink>
+            <div class="info-item">
+              <span class="info-label"><FileText class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Montant</span>
+              <span class="info-value">{{ formatPrice(contract.saleAmount) }}</span>
             </div>
-          </template>
-          <div v-else class="related-items-empty">
-            <Users class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
-            <p>Aucun acheteur lié</p>
+            <div class="info-item">
+              <span class="info-label"><LandPlot class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> Parcelles</span>
+              <span class="info-value">{{ soldParcels.length }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Parcels -->
-        <div class="detail-section">
-          <h2 class="section-title">Parcelles vendues</h2>
-          <template v-if="contract.parcels && contract.parcels.length > 0">
-            <div class="related-items">
-              <div
-                v-for="parcel in contract.parcels"
-                :key="parcel.id"
-                class="related-item"
-              >
+        <div class="compact-grid">
+          <div class="detail-section compact-section">
+            <h2 class="section-title">Acheteur</h2>
+            <template v-if="contract.customer">
+              <div class="related-items compact-list">
                 <RouterLink
+                  :to="`/clients/${contract.customer.id}`"
+                  class="related-item"
+                >
+                  <User class="h-4 w-4" :stroke-width="1.5" />
+                  <div style="flex:1">
+                    <div style="font-weight:600">{{ contract.customer.name || '—' }}</div>
+                    <div v-if="contract.customer.phone" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                      <Phone class="h-3.5 w-3.5 inline" :stroke-width="1.5" /> {{ contract.customer.phone }}
+                    </div>
+                  </div>
+                </RouterLink>
+              </div>
+            </template>
+            <div v-else class="related-items-empty compact-empty">
+              <Users class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
+              <p>Aucun acheteur lié</p>
+            </div>
+          </div>
+
+          <div class="detail-section compact-section">
+            <h2 class="section-title">Parcelles vendues</h2>
+            <template v-if="soldParcels.length > 0">
+              <div class="related-items compact-list">
+                <RouterLink
+                  v-for="parcel in soldParcels"
+                  :key="parcel.id"
                   :to="`/parcelles/${parcel.id}`"
                   class="related-item"
                 >
-                <LandPlot class="h-4 w-4" :stroke-width="1.5" />
-                <div style="flex:1">
-                  <div style="font-weight:600">{{ parcel.label || '—' }}</div>
-                  <div v-if="parcel.terrain" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    Terrain: {{ parcel.terrain.name }}
+                  <LandPlot class="h-4 w-4" :stroke-width="1.5" />
+                  <div style="flex:1">
+                    <div style="font-weight:600">{{ parcel.label || '—' }}</div>
+                    <div v-if="parcel.terrain" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                      Terrain: {{ parcel.terrain.name }}
+                    </div>
+                    <div v-if="parcel.areaSqm" style="font-size:0.8125rem;color:var(--color-text-muted)">
+                      Surface: {{ parcel.areaSqm.toFixed(2) }} m²
+                    </div>
                   </div>
-                  <div v-if="parcel.areaSqm" style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    Surface: {{ parcel.areaSqm.toFixed(2) }} m²
-                  </div>
-                </div>
                 </RouterLink>
               </div>
+            </template>
+            <div v-else class="related-items-empty compact-empty">
+              <LandPlot class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
+              <p>Aucune parcelle liée</p>
             </div>
-          </template>
-          <div v-else class="related-items-empty">
-            <LandPlot class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
-            <p>Aucune parcelle liée</p>
           </div>
-        </div>
 
-        <!-- Documents & Images -->
-        <div class="detail-section">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
-            <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
-            <RouterLink
-              :to="{ path: '/documents/nouveau', query: { contractId: contract.id } }"
-              class="btn btn-secondary btn-sm"
-            >
-              <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
-              Ajouter document
-            </RouterLink>
-          </div>
-          <template v-if="contract.documents && contract.documents.length > 0">
-            <div class="related-items">
-              <div
-                v-for="cd in contract.documents"
-                :key="cd.documentId"
-                class="related-item"
-                style="cursor:default"
+          <div class="detail-section compact-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
+              <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
+              <RouterLink
+                :to="{ path: '/documents/nouveau', query: { contractId: contract.id } }"
+                class="btn btn-secondary btn-sm"
               >
-                <component :is="cd.document?.mimeType?.startsWith('image/') ? Image : File" class="h-4 w-4" :stroke-width="1.5" />
-                <div style="flex:1">
-                  <div style="font-weight:600">{{ cd.document?.name || 'Document' }}</div>
-                  <div style="font-size:0.8125rem;color:var(--color-text-muted)">
-                    {{ cd.document?.type || 'autre' }}
-                    <template v-if="cd.document?.sizeBytes">
-                      — {{ (cd.document.sizeBytes / 1024).toFixed(1) }} Ko
-                    </template>
-                  </div>
-                </div>
-                <a
-                  v-if="cd.document?.googleDriveId"
-                  :href="`https://drive.google.com/file/d/${cd.document.googleDriveId}/view`"
-                  target="_blank"
-                  class="btn btn-secondary btn-sm"
-                  @click.stop
-                >
-                  Ouvrir ↗
-                </a>
-              </div>
+                <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+                Ajouter document
+              </RouterLink>
             </div>
-          </template>
-          <div v-else class="related-items-empty">
-            <File class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
-            <p>Aucun document associé</p>
-          </div>
-
-          <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
-            <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
-              Lier documents
-            </button>
+            <template v-if="linkedDocuments.length > 0">
+              <div class="related-items compact-list">
+                <div
+                  v-for="cd in linkedDocuments"
+                  :key="cd.documentId"
+                  class="related-item"
+                  style="cursor:default"
+                >
+                  <component :is="cd.document?.mimeType?.startsWith('image/') ? Image : File" class="h-4 w-4" :stroke-width="1.5" />
+                  <div style="flex:1">
+                    <div style="font-weight:600">{{ cd.document?.name || 'Document' }}</div>
+                    <div style="font-size:0.8125rem;color:var(--color-text-muted)">
+                      {{ cd.document?.type || 'autre' }}
+                      <template v-if="cd.document?.sizeBytes">
+                        — {{ (cd.document.sizeBytes / 1024).toFixed(1) }} Ko
+                      </template>
+                    </div>
+                  </div>
+                  <a
+                    v-if="cd.document?.googleDriveId"
+                    :href="`https://drive.google.com/file/d/${cd.document.googleDriveId}/view`"
+                    target="_blank"
+                    class="btn btn-secondary btn-sm"
+                    @click.stop
+                  >
+                    Ouvrir ↗
+                  </a>
+                </div>
+              </div>
+            </template>
+            <div v-else class="related-items-empty compact-empty">
+              <File class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
+              <p>Aucun document associé</p>
+            </div>
           </div>
         </div>
 
-        <!-- Notes -->
         <div v-if="contract.notes" class="detail-section">
           <h2 class="section-title">Notes</h2>
           <p style="color:var(--color-text-secondary);font-size:0.9375rem;white-space:pre-wrap">
@@ -333,6 +344,39 @@ function closeLinkDocumentsModal() {
 </template>
 
 <style scoped>
+.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.compact-section {
+  min-height: 260px;
+}
+
+.compact-list {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.compact-empty {
+  min-height: 170px;
+}
+
+@media (max-width: 960px) {
+  .compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-section {
+    min-height: auto;
+  }
+
+  .compact-list {
+    max-height: none;
+  }
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
