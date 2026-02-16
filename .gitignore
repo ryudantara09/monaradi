@@ -137,3 +137,9 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Monaradi local backend artifacts
+backend/dev.db
+backend/dev.db-*
+backend/uploads/documents/*
+!backend/uploads/documents/.gitkeep
