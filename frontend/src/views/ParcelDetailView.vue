@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchParcel, deleteParcel } from '@/services/api';
+import { FileText } from '@/lib/icons';
 
 const route = useRoute();
 const router = useRouter();
@@ -91,6 +92,14 @@ function formatDate(value?: string) {
         </div>
       </div>
       <div class="page-actions">
+        <RouterLink
+          v-if="parcel"
+          :to="{ path: '/documents/nouveau', query: { parcelId: parcel.id } }"
+          class="btn btn-secondary"
+        >
+          <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+          Nouveau document
+        </RouterLink>
         <button @click="handleDelete" class="btn btn-danger">Supprimer</button>
       </div>
     </header>
@@ -159,6 +168,31 @@ function formatDate(value?: string) {
             <span class="value">{{ formatDate(parcel.createdAt) }}</span>
           </div>
         </div>
+      </article>
+
+      <article class="summary-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
+          <h2 class="card-title" style="margin-bottom:0">Documents</h2>
+          <RouterLink
+            :to="{ path: '/documents/nouveau', query: { parcelId: parcel.id } }"
+            class="btn btn-secondary btn-sm"
+          >
+            <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+            Ajouter document
+          </RouterLink>
+        </div>
+
+        <div class="info-list" v-if="parcel.documents && parcel.documents.length > 0">
+          <div v-for="pd in parcel.documents" :key="pd.documentId" class="info-row">
+            <span class="label">{{ pd.document?.name || 'Document' }}</span>
+            <span class="value" style="font-size:0.8125rem">
+              {{ pd.document?.type || 'autre' }}
+            </span>
+          </div>
+        </div>
+        <p v-else style="color:var(--color-text-muted);font-size:0.875rem;margin:0">
+          Aucun document associé
+        </p>
       </article>
     </section>
   </div>

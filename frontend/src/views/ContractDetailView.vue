@@ -61,6 +61,14 @@ function formatDate(dateStr: string | null | undefined): string {
           </p>
         </div>
         <div class="page-actions">
+          <RouterLink
+            v-if="contract"
+            :to="{ path: '/documents/nouveau', query: { contractId: contract.id } }"
+            class="btn btn-secondary"
+          >
+            <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+            Nouveau document
+          </RouterLink>
           <button class="btn btn-danger" @click="handleDelete"><Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" /> Supprimer</button>
         </div>
       </header>
@@ -137,7 +145,16 @@ function formatDate(dateStr: string | null | undefined): string {
 
         <!-- Documents & Images -->
         <div class="detail-section">
-          <h2 class="section-title">Documents & Images</h2>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
+            <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
+            <RouterLink
+              :to="{ path: '/documents/nouveau', query: { contractId: contract.id } }"
+              class="btn btn-secondary btn-sm"
+            >
+              <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+              Ajouter document
+            </RouterLink>
+          </div>
           <template v-if="contract.documents && contract.documents.length > 0">
             <div class="related-items">
               <div

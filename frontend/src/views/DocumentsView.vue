@@ -28,9 +28,11 @@ const parcels = ref<any[]>([]);
 const contracts = ref<any[]>([]);
 
 const linkingDocumentId = ref<string | null>(null);
-const linkForm = ref({
-  entityType: 'terrain',
-  entityId: '',
+const linkSelection = ref({
+  terrains: [] as string[],
+  customers: [] as string[],
+  parcels: [] as string[],
+  contracts: [] as string[],
 });
 const linkSaving = ref(false);
 const linkError = ref<string | null>(null);
@@ -132,31 +134,14 @@ function openEdit(doc: any) {
   };
 }
 
-const selectedEntityOptions = computed(() => {
-  if (linkForm.value.entityType === 'terrain') {
-    return terrains.value.map((terrain) => ({ id: terrain.id, label: terrain.name }));
-  }
-
-  if (linkForm.value.entityType === 'customer') {
-    return customers.value.map((customer) => ({ id: customer.id, label: customer.name }));
-  }
-
-  if (linkForm.value.entityType === 'parcel') {
-    return parcels.value.map((parcel) => ({ id: parcel.id, label: parcel.label }));
-  }
-
-  return contracts.value.map((contract) => ({
-    id: contract.id,
-    label: contract.contractNumber || `Contrat ${contract.id.slice(0, 8)}`,
-  }));
-});
-
 function openLink(doc: any) {
   linkingDocumentId.value = doc.id;
   linkError.value = null;
-  linkForm.value = {
-    entityType: 'terrain',
-    entityId: '',
+  linkSelection.value = {
+    terrains: (doc.terrains || []).map((item: any) => item.terrainId).filter(Boolean),
+    customers: (doc.customers || []).map((item: any) => item.customerId).filter(Boolean),
+    parcels: (doc.parcels || []).map((item: any) => item.parcelId).filter(Boolean),
+    contracts: (doc.contracts || []).map((item: any) => item.contractId).filter(Boolean),
   };
 }
 
@@ -170,17 +155,54 @@ function parseApiError(error: any, fallback: string): string {
   return error?.response?.data?.error || fallback;
 }
 
+function toggleLinkSelection(bucket: 'terrains' | 'customers' | 'parcels' | 'contracts', id: string, checked: boolean) {
+  if (checked) {
+    if (!linkSelection.value[bucket].includes(id)) {
+      linkSelection.value[bucket].push(id);
+    }
+    return;
+  }
+
+  linkSelection.value[bucket] = linkSelection.value[bucket].filter((itemId) => itemId !== id);
+}
+
+function isLinkChecked(bucket: 'terrains' | 'customers' | 'parcels' | 'contracts', id: string): boolean {
+  return linkSelection.value[bucket].includes(id);
+}
+
 async function saveLink() {
   if (!linkingDocumentId.value) return;
-  if (!linkForm.value.entityId) {
-    linkError.value = 'Veuillez sélectionner une entité.';
+
+  const selectedCount =
+    linkSelection.value.terrains.length +
+    linkSelection.value.customers.length +
+    linkSelection.value.parcels.length +
+    linkSelection.value.contracts.length;
+
+  if (selectedCount === 0) {
+    linkError.value = 'Veuillez sélectionner au moins une entité.';
     return;
   }
 
   linkSaving.value = true;
   linkError.value = null;
   try {
-    await linkDocument(linkingDocumentId.value, linkForm.value.entityType, linkForm.value.entityId);
+    const jobs: Promise<void>[] = [];
+
+    for (const terrainId of linkSelection.value.terrains) {
+      jobs.push(linkDocument(linkingDocumentId.value, 'terrain', terrainId));
+    }
+    for (const customerId of linkSelection.value.customers) {
+      jobs.push(linkDocument(linkingDocumentId.value, 'customer', customerId));
+    }
+    for (const parcelId of linkSelection.value.parcels) {
+      jobs.push(linkDocument(linkingDocumentId.value, 'parcel', parcelId));
+    }
+    for (const contractId of linkSelection.value.contracts) {
+      jobs.push(linkDocument(linkingDocumentId.value, 'contract', contractId));
+    }
+
+    await Promise.all(jobs);
     await loadDocuments();
     closeLink();
   } catch (error) {
@@ -357,28 +379,70 @@ async function deleteDoc(doc: any) {
             <button class="modal-close" @click="closeLink">x</button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label class="form-label">Type d'entité</label>
-              <select class="input" v-model="linkForm.entityType">
-                <option value="terrain">Terrain</option>
-                <option value="customer">Client</option>
-                <option value="parcel">Parcelle</option>
-                <option value="contract">Contrat</option>
-              </select>
-            </div>
+            <p style="margin:0;color:var(--muted-foreground);font-size:0.875rem;">
+              Sélectionnez les entités à lier. Les catégories sont séparées pour faciliter la sélection.
+            </p>
 
-            <div class="form-group">
-              <label class="form-label">Entité</label>
-              <select class="input" v-model="linkForm.entityId">
-                <option value="">Sélectionner</option>
-                <option
-                  v-for="entity in selectedEntityOptions"
-                  :key="entity.id"
-                  :value="entity.id"
-                >
-                  {{ entity.label }}
-                </option>
-              </select>
+            <div class="entity-groups">
+              <div class="entity-group">
+                <h3 class="entity-group-title">Terrains</h3>
+                <div class="entity-list" v-if="terrains.length > 0">
+                  <label v-for="terrain in terrains" :key="terrain.id" class="entity-item">
+                    <input
+                      type="checkbox"
+                      :checked="isLinkChecked('terrains', terrain.id)"
+                      @change="toggleLinkSelection('terrains', terrain.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span>{{ terrain.name }}</span>
+                  </label>
+                </div>
+                <p v-else class="entity-empty">Aucun terrain disponible.</p>
+              </div>
+
+              <div class="entity-group">
+                <h3 class="entity-group-title">Clients</h3>
+                <div class="entity-list" v-if="customers.length > 0">
+                  <label v-for="customer in customers" :key="customer.id" class="entity-item">
+                    <input
+                      type="checkbox"
+                      :checked="isLinkChecked('customers', customer.id)"
+                      @change="toggleLinkSelection('customers', customer.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span>{{ customer.name }}</span>
+                  </label>
+                </div>
+                <p v-else class="entity-empty">Aucun client disponible.</p>
+              </div>
+
+              <div class="entity-group">
+                <h3 class="entity-group-title">Parcelles</h3>
+                <div class="entity-list" v-if="parcels.length > 0">
+                  <label v-for="parcel in parcels" :key="parcel.id" class="entity-item">
+                    <input
+                      type="checkbox"
+                      :checked="isLinkChecked('parcels', parcel.id)"
+                      @change="toggleLinkSelection('parcels', parcel.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span>{{ parcel.label }}</span>
+                  </label>
+                </div>
+                <p v-else class="entity-empty">Aucune parcelle disponible.</p>
+              </div>
+
+              <div class="entity-group">
+                <h3 class="entity-group-title">Contrats</h3>
+                <div class="entity-list" v-if="contracts.length > 0">
+                  <label v-for="contract in contracts" :key="contract.id" class="entity-item">
+                    <input
+                      type="checkbox"
+                      :checked="isLinkChecked('contracts', contract.id)"
+                      @change="toggleLinkSelection('contracts', contract.id, ($event.target as HTMLInputElement).checked)"
+                    />
+                    <span>{{ contract.contractNumber || `Contrat ${contract.id.slice(0, 8)}` }}</span>
+                  </label>
+                </div>
+                <p v-else class="entity-empty">Aucun contrat disponible.</p>
+              </div>
             </div>
 
             <div
@@ -565,7 +629,7 @@ async function deleteDoc(doc: any) {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 500px;
+  max-width: 760px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.2s ease;
 }
@@ -606,5 +670,45 @@ async function deleteDoc(doc: any) {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.entity-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.entity-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--card);
+}
+
+.entity-group-title {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.entity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.entity-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
 }
 </style>

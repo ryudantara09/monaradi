@@ -168,6 +168,14 @@ function statusColor(status: string): string {
           </p>
         </div>
         <div class="page-actions">
+          <RouterLink
+            v-if="customer"
+            :to="{ path: '/documents/nouveau', query: { customerId: customer.id } }"
+            class="btn btn-secondary"
+          >
+            <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+            Nouveau document
+          </RouterLink>
           <template v-if="isEditing">
             <button class="btn btn-secondary" @click="cancelEdit">Annuler</button>
             <button class="btn btn-primary" @click="handleSave" :disabled="saving">
@@ -376,6 +384,46 @@ function statusColor(status: string): string {
             <RouterLink to="/contrats/nouveau" class="btn btn-secondary btn-sm">
               + Créer Contrat
             </RouterLink>
+          </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="detail-section">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
+            <h2 class="section-title" style="margin-bottom:0">Documents</h2>
+            <RouterLink
+              :to="{ path: '/documents/nouveau', query: { customerId: customer.id } }"
+              class="btn btn-secondary btn-sm"
+            >
+              <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+              Ajouter document
+            </RouterLink>
+          </div>
+
+          <template v-if="customer.documents && customer.documents.length > 0">
+            <div class="related-items">
+              <div
+                v-for="cd in customer.documents"
+                :key="cd.documentId"
+                class="related-item"
+                style="cursor:default"
+              >
+                <FileText class="h-4 w-4" :stroke-width="1.5" />
+                <div style="flex:1">
+                  <div style="font-weight:600">{{ cd.document?.name || 'Document' }}</div>
+                  <div style="font-size:0.8125rem;color:var(--color-text-muted)">
+                    {{ cd.document?.type || 'autre' }}
+                    <template v-if="cd.document?.sizeBytes">
+                      — {{ (cd.document.sizeBytes / 1024).toFixed(1) }} Ko
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="related-items-empty">
+            <FileText class="h-8 w-8 text-muted-foreground" :stroke-width="1.5" />
+            <p>Aucun document associé</p>
           </div>
         </div>
 

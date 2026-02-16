@@ -361,6 +361,14 @@ function paymentLabel(status: string): string {
           <p class="page-subtitle">{{ terrain.address || 'Aucune adresse spécifiée' }}</p>
         </div>
         <div class="page-actions">
+          <RouterLink
+            v-if="terrain"
+            :to="{ path: '/documents/nouveau', query: { terrainId: terrain.id } }"
+            class="btn btn-secondary"
+          >
+            <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
+            Nouveau document
+          </RouterLink>
           <template v-if="isEditing">
             <button class="btn btn-secondary" @click="cancelEdit">Annuler</button>
             <button class="btn btn-primary" @click="handleSave" :disabled="saving">
@@ -611,7 +619,16 @@ function paymentLabel(status: string): string {
 
         <!-- Documents -->
         <div class="detail-section">
-          <h2 class="section-title">Documents & Images</h2>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);margin-bottom:var(--space-sm)">
+            <h2 class="section-title" style="margin-bottom:0">Documents & Images</h2>
+            <RouterLink
+              :to="{ path: '/documents/nouveau', query: { terrainId: terrain.id } }"
+              class="btn btn-secondary btn-sm"
+            >
+              <Plus class="h-3.5 w-3.5" :stroke-width="1.5" />
+              Ajouter document
+            </RouterLink>
+          </div>
           <template v-if="terrain.documents && terrain.documents.length > 0">
             <div class="related-items">
               <div
