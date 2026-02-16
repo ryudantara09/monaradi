@@ -459,6 +459,14 @@ function statusColor(status: string): string {
                       </template>
                     </div>
                   </div>
+                  <RouterLink
+                    v-if="cd.document?.id"
+                    :to="`/documents/${cd.document.id}`"
+                    class="btn btn-secondary btn-sm"
+                    @click.stop
+                  >
+                    Ouvrir
+                  </RouterLink>
                 </div>
               </div>
             </template>

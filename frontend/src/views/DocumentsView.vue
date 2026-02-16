@@ -364,19 +364,14 @@ async function deleteDoc(doc: any) {
                   <Trash2 class="h-3.5 w-3.5" :stroke-width="1.5" />
                 </button>
              </div>
-             <a
-                  v-if="doc.googleDriveId"
-                  :href="`https://drive.google.com/file/d/${doc.googleDriveId}/view`"
-                  target="_blank"
-                  class="btn btn-secondary btn-sm"
-                  style="width: 100%; justify-content: center;"
-                >
-                  <Eye class="h-3.5 w-3.5" :stroke-width="1.5" />
-                  Ouvrir
-            </a>
-            <span v-else style="font-size: 0.8em; color: var(--muted-foreground); text-align: center; display: block;">
-                Local File
-            </span>
+            <RouterLink
+              :to="`/documents/${doc.id}`"
+              class="btn btn-secondary btn-sm"
+              style="width: 100%; justify-content: center;"
+            >
+              <Eye class="h-3.5 w-3.5" :stroke-width="1.5" />
+              Ouvrir
+            </RouterLink>
         </div>
       </div>
     </div>

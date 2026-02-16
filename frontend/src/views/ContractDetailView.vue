@@ -265,15 +265,14 @@ function closeLinkDocumentsModal() {
                       </template>
                     </div>
                   </div>
-                  <a
-                    v-if="cd.document?.googleDriveId"
-                    :href="`https://drive.google.com/file/d/${cd.document.googleDriveId}/view`"
-                    target="_blank"
+                  <RouterLink
+                    v-if="cd.document?.id"
+                    :to="`/documents/${cd.document.id}`"
                     class="btn btn-secondary btn-sm"
                     @click.stop
                   >
-                    Ouvrir ↗
-                  </a>
+                    Ouvrir
+                  </RouterLink>
                 </div>
               </div>
             </template>

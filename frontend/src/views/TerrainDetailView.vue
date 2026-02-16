@@ -912,15 +912,14 @@ function statusColor(status: string): string {
                     </template>
                   </div>
                 </div>
-                <a
-                  v-if="td.document?.googleDriveId"
-                  :href="`https://drive.google.com/file/d/${td.document.googleDriveId}/view`"
-                  target="_blank"
+                <RouterLink
+                  v-if="td.document?.id"
+                  :to="`/documents/${td.document.id}`"
                   class="btn btn-secondary btn-sm"
                   @click.stop
                 >
-                  Ouvrir ↗
-                </a>
+                  Ouvrir
+                </RouterLink>
               </div>
             </div>
           </template>

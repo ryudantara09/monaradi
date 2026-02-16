@@ -110,6 +110,11 @@ export async function fetchDocuments(params?: { linked?: boolean; type?: string 
     return data;
 }
 
+export async function fetchDocument(id: string): Promise<any> {
+    const { data } = await api.get(`/documents/${id}`);
+    return data;
+}
+
 export async function createDocument(payload: { name: string; type?: string }): Promise<any> {
     const { data } = await api.post('/documents', payload);
     return data;
