@@ -16,6 +16,10 @@ export interface Parcel {
     terrainId?: string;
     customerId?: string;
     contractId?: string;
+    terrain?: {
+        id: string;
+        name: string;
+    } | null;
 }
 
 export interface Project {

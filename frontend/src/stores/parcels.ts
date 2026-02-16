@@ -40,6 +40,8 @@ export const useParcelsStore = defineStore('parcels', () => {
             areaSqm,
             pricePerSqm: 0,
             totalPrice: 0,
+            amountPaid: 0,
+            paymentStatus: 'UNPAID',
         };
         parcels.value.push(parcel);
         return parcel;

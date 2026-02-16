@@ -25,7 +25,7 @@ const filteredContracts = computed(() => {
   return contracts.value.filter(c =>
     c.contractNumber?.toLowerCase().includes(q) ||
     c.customer?.name?.toLowerCase().includes(q) ||
-    c.parcels?.some(p => p.label?.toLowerCase().includes(q) || p.terrain?.name?.toLowerCase().includes(q))
+    c.parcels?.some(p => p.label?.toLowerCase().includes(q))
   );
 });
 

@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { fetchTerrains, fetchTerrain, createTerrain, updateTerrain, deleteTerrain } from '@/services/api';
+import { fetchTerrains, createTerrain } from '@/services/api';
 import type { Terrain } from '@/types';
 import { useAsyncState } from './useAsyncState';
 
@@ -7,7 +7,6 @@ export function useTerrains() {
   const terrains = ref<Terrain[]>([]);
   
   const { 
-    state: terrainList, 
     isLoading: isLoadingList, 
     error: listError, 
     execute: loadTerrains 

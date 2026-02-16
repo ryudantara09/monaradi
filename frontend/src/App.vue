@@ -61,7 +61,7 @@ function isActive(path: string, exact?: boolean): boolean {
   return route.path.startsWith(path);
 }
 
-function onThemeModeChange(value: string | null | undefined) {
+function onThemeModeChange(value: unknown) {
   if (value === 'light' || value === 'dark' || value === 'system') {
     setMode(value as ThemeMode);
   }

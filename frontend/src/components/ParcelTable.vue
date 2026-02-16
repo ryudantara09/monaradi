@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { useParcelsStore } from '@/stores/parcels';
-import { useCalibrationStore } from '@/stores/calibration';
 import { AlertCircle, Eye } from '@/lib/icons';
 import { Badge } from '@/components/ui/badge';
 
 const parcelsStore = useParcelsStore();
-const calibrationStore = useCalibrationStore();
 
 function formatTND(value: number) {
   return value.toLocaleString('fr-FR', {
@@ -21,13 +19,13 @@ function selectParcel(id: string) {
 const statusVariant: Record<string, "success" | "destructive" | "default" | "secondary" | "outline" | "warning" | "info"> = {
   AVAILABLE: 'success',
   SOLD: 'destructive',
-  PENDING: 'warning',
+  RESERVED: 'warning',
 };
 
 const statusLabels: Record<string, string> = {
   AVAILABLE: 'Disponible',
   SOLD: 'Vendu',
-  PENDING: 'En attente',
+  RESERVED: 'Réservé',
 };
 </script>
 
@@ -72,19 +70,19 @@ const statusLabels: Record<string, string> = {
               </Badge>
             </td>
             <td class="px-6 py-4 text-sm text-muted-foreground">
-              <div v-if="parcel.ownerId" class="flex items-center gap-2">
+              <div v-if="parcel.ownerName" class="flex items-center gap-2">
                 <div class="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                  {{ parcel.ownerId.substring(0, 1) }}
+                  {{ parcel.ownerName.substring(0, 1).toUpperCase() }}
                 </div>
-                <span class="text-foreground">Client #{{ parcel.ownerId.substring(0, 4) }}</span>
+                <span class="text-foreground">{{ parcel.ownerName }}</span>
               </div>
               <span v-else class="text-muted-foreground italic">-</span>
             </td>
             <td class="px-6 py-4 text-right font-mono text-sm text-foreground">
-              {{ Math.round(parcel.area).toLocaleString() }}
+              {{ Math.round(parcel.areaSqm).toLocaleString() }}
             </td>
             <td class="px-6 py-4 text-right font-mono text-sm font-medium text-foreground">
-              {{ formatTND(parcel.price) }}
+              {{ formatTND(parcel.totalPrice) }}
             </td>
             <td class="px-6 py-4 text-right">
               <button 

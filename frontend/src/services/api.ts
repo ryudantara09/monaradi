@@ -197,7 +197,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
         terrains: terrains.length,
         customers: customers.length,
         contracts: contracts.length,
-        activeContracts: contracts.filter(c => c.status === 'active').length,
+        activeContracts: contracts.length,
     };
 }
 
