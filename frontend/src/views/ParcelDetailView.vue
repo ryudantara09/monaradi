@@ -170,6 +170,10 @@ function closeLinkDocumentsModal() {
           <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
           Nouveau document
         </RouterLink>
+        <button class="btn btn-secondary" @click="openLinkDocumentsModal">
+          <FileText class="h-3.5 w-3.5" :stroke-width="1.5" />
+          Lier documents
+        </button>
         <button @click="handleDelete" class="btn btn-danger">Supprimer</button>
       </div>
     </header>
@@ -252,7 +256,7 @@ function closeLinkDocumentsModal() {
           </RouterLink>
         </div>
 
-        <div class="info-list" v-if="parcel.documents && parcel.documents.length > 0">
+        <div class="info-list compact-doc-list" v-if="parcel.documents && parcel.documents.length > 0">
           <div v-for="pd in parcel.documents" :key="pd.documentId" class="info-row">
             <span class="label">{{ pd.document?.name || 'Document' }}</span>
             <span class="value" style="font-size:0.8125rem">
@@ -263,12 +267,6 @@ function closeLinkDocumentsModal() {
         <p v-else style="color:var(--color-text-muted);font-size:0.875rem;margin:0">
           Aucun document associé
         </p>
-
-        <div style="display:flex;justify-content:flex-end;margin-top:var(--space-md)">
-          <button class="btn btn-secondary btn-sm" @click="openLinkDocumentsModal">
-            Lier documents
-          </button>
-        </div>
       </article>
     </section>
 
@@ -342,6 +340,11 @@ function closeLinkDocumentsModal() {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+.compact-doc-list {
+  max-height: 260px;
+  overflow: auto;
 }
 
 .info-row {
