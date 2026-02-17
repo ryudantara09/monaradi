@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { fetchTerrain, updateTerrain, deleteTerrain, fetchCustomers, createParcel, updateParcel, deleteParcel, createContract, fetchDocuments, linkDocument, createCustomer, createDocument, uploadDocument } from '@/services/api';
 import TerrainEditorView from '@/views/TerrainEditorView.vue';
+import GoogleMapView from '@/components/GoogleMapView.vue';
 import { LandPlot, Square, User, Building2, Pencil, Trash2, FileText, MapPin, XCircle, AlertCircle, File, Plus } from '@/lib/icons';
 
 const customers = ref<any[]>([]);
@@ -956,7 +957,28 @@ function statusColor(status: string): string {
 
       <!-- Visual Tab -->
       <div v-if="currentTab === 'visual'" style="margin-top:var(--space-md)">
-         <TerrainEditorView :embedded="true" />      </div>
+        <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+          <!-- Google Maps Section -->
+          <div class="detail-section google-map-section">
+            <GoogleMapView
+              v-if="terrain.latitude && terrain.longitude"
+              :latitude="terrain.latitude"
+              :longitude="terrain.longitude"
+              :zoom="16"
+            />
+            <div v-else style="padding: var(--space-lg); text-align: center; color: var(--color-text-muted);">
+              <MapPin class="h-12 w-12 mx-auto mb-4" style="opacity: 0.5;" :stroke-width="1.5" />
+              <p>Aucune coordonnée GPS définie pour ce terrain.</p>
+              <p style="font-size: 0.875rem; margin-top: 0.5rem;">Ajoutez des coordonnées dans les détails du terrain pour afficher la carte.</p>
+            </div>
+          </div>
+
+          <!-- SVG Editor Section -->
+          <div class="detail-section" style="padding: 0;">
+            <TerrainEditorView :embedded="true" />
+          </div>
+        </div>
+      </div>
     </template>
 
     <div v-else class="empty-state">
@@ -1413,5 +1435,12 @@ function statusColor(status: string): string {
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.google-map-section {
+  padding: 0 !important;
+  min-height: 600px;
+  height: 600px;
+  overflow: hidden;
 }
 </style>

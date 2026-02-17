@@ -26,6 +26,8 @@ const svgRef = ref<SVGSVGElement | null>(null);
 const imageLoaded = ref(false);
 const containerWidth = ref(0);
 const containerHeight = ref(0);
+let dimensionRetryCount = 0;
+const MAX_DIMENSION_RETRIES = 10;
 
 // Calibration state
 const calibrationStart = ref<[number, number] | null>(null);
@@ -278,11 +280,18 @@ function updateDimensions() {
   console.log('[ImageCanvas] Update dimensions:', { cw, ch, nw, nh });
 
   if (cw === 0 || ch === 0 || nw === 0 || nh === 0) {
-    console.warn('[ImageCanvas] Zero dimensions detected, retrying...');
-    // Retry shortly if dimensions are missing (e.g. image not fully loaded/rendered)
-    setTimeout(updateDimensions, 100);
+    dimensionRetryCount++;
+    if (dimensionRetryCount < MAX_DIMENSION_RETRIES) {
+      console.warn('[ImageCanvas] Zero dimensions detected, retrying...', `(${dimensionRetryCount}/${MAX_DIMENSION_RETRIES})`);
+      setTimeout(updateDimensions, 100);
+    } else {
+      console.error('[ImageCanvas] Max retries reached, dimensions still zero:', { cw, ch, nw, nh });
+    }
     return;
   }
+
+  // Reset retry count on success
+  dimensionRetryCount = 0;
   
   containerWidth.value = cw;
   containerHeight.value = ch;

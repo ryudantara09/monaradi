@@ -1,8 +1,8 @@
 # Google Maps Integration Plan
 
 ### Phase 1: Interactive Map Foundation
-- [ ] **Satellite & Hybrid Views**: Users can toggle between standard roadmap, satellite imagery (for real-world context), and hybrid labels.
-- [ ] **Smart Location Search**: A search bar allows users to find locations by address, city, or coordinates.
+- [x] **Satellite & Hybrid Views**: Users can toggle between standard roadmap, satellite imagery (for real-world context), and hybrid labels.
+- [x] **Smart Location Search**: A search bar allows users to find locations by address, city, or coordinates. <!-- TODO: ESC key to clear marker not working - needs investigation -->
 - [ ] **"Locate Me" Button**: A single click centers the map on the user's current GPS position.
 - [ ] **Fullscreen Mode**: Users can expand the map to the full screen for a better drawing experience.
 - [ ] **Dynamic Zoom**: The map automatically zooms to fit all drawn items whenever a Terrain or Parcel is opened.
