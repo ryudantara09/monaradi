@@ -1,18 +1,23 @@
 # Google Maps Integration Plan
 
+## Architecture Decision: Single Map Instance
+**IMPORTANT**: To minimize Google Maps API costs (stay within $200/month free tier), the map will be loaded ONCE in a dedicated section, NOT embedded in individual terrain/parcel detail pages. The map will be placed in a separate section accessible from the sidebar, allowing users to view and manage all terrains/parcels on a single map instance.
+
 ### Phase 1: Interactive Map Foundation
 - [x] **Satellite & Hybrid Views**: Users can toggle between standard roadmap, satellite imagery (for real-world context), and hybrid labels.
 - [x] **Smart Location Search**: A search bar allows users to find locations by address, city, or coordinates. <!-- TODO: ESC key to clear marker not working - needs investigation -->
-- [ ] **"Locate Me" Button**: A single click centers the map on the user's current GPS position.
-- [ ] **Fullscreen Mode**: Users can expand the map to the full screen for a better drawing experience.
-- [ ] **Dynamic Zoom**: The map automatically zooms to fit all drawn items whenever a Terrain or Parcel is opened.
+- [x] **"Locate Me" Button**: A single click centers the map on the user's current GPS position.
+- [x] **Fullscreen Mode**: Users can expand the map to the full screen for a better drawing experience.
 
 ### Phase 2: Drawing & Editing Tools
-- [ ] **Polygon Drawing Tool**: Users can draw precise shapes for Terrains and Parcels by clicking points on the map.
-- [ ] **Drag-to-Edit**: Users can select an existing shape and drag its corners to adjust boundaries.
-- [ ] **Undo/Redo Actions**: Users can easily undo the last point added or change made during drawing.
-- [ ] **Measurement Display**: As the user draws, the map shows real-time edge lengths (in meters) and total area.
-- [ ] **Point-Update**: The user can update points by clicking and dragging them, while keeping it connected to the rest of the shape.
+- [x] **Polygon Drawing Tool**: Users can draw precise shapes for Terrains and Parcels by clicking points on the map.
+- [x] **Drag-to-Edit**: Users can select an existing shape and drag its corners to adjust boundaries.
+- [-] **Undo/Redo Actions**: Users can easily undo the last point added or change made during drawing. <!-- ISSUE: Only works AFTER drawing is complete, not during drawing. Google Maps API limitation. -->
+- [x] **Measurement Display**: As the user draws, the map shows real-time edge lengths (in meters) and total area.
+- [x] **Point-Update**: The user can update points by clicking and dragging them, while keeping it connected to the rest of the shape.
+- [x] **Delete Polygon**: Delete button removes the entire polygon from the map.
+- [x] **Delete Specific Point**: Right-click on any vertex to delete it (minimum 3 vertices required).
+- [-] **Cancel Drawing**: A cancel button allows users to exit drawing mode and discard the current shape. <!-- INCOMPLETE: Does not remove incomplete polygon. -->
 
 ### Phase 3: Terrain & Parcel Management
 - [ ] **Terrain Pinning**: Users can drop a pin to set the official "Center Point" of a Terrain for quick navigation.
