@@ -20,12 +20,12 @@
 - [-] **Cancel Drawing**: A cancel button allows users to exit drawing mode and discard the current shape. <!-- INCOMPLETE: Does not remove incomplete polygon. -->
 
 ### Phase 3: Terrain & Parcel Management
-- [ ] **Terrain Pinning**: Users can drop a pin to set the official "Center Point" of a Terrain for quick navigation.
-- [ ] **Terrain Boundary Definition**: Users can draw a master boundary polygon that defines the full extent of a Terrain.
-- [ ] **Parcel Sub-division**: Users can draw multiple Parcel polygons inside a Terrain boundary.
-- [ ] **Shape Validation**: The system prevents users from drawing self-intersecting shapes or invalid geometry.
-- [ ] **Coordinate Inspector**: Users can click any point or corner to see its exact GPS coordinates (Latitude/Longitude).
-- [ ] **Shape Export**: the shape is the mapped directly to the terrain/parcelle and is shown as a document in their detail pages.
+- [x] **Terrain Pinning**: Users can drop a pin to set the official "Center Point" of a Terrain for quick navigation.
+- [x] **Terrain Boundary Definition**: Users can draw a master boundary polygon that defines the full extent of a Terrain.
+- [x] **Parcel Sub-division**: Users can draw multiple Parcel polygons inside a Terrain boundary.
+- [x] **Shape Validation**: The system prevents users from drawing self-intersecting shapes or invalid geometry.
+- [x] **Coordinate Inspector**: Users can click any point or corner to see its exact GPS coordinates (Latitude/Longitude).
+- [x] **Shape Export**: the shape is the mapped directly to the terrain/parcelle and is shown as a document in their detail pages.
 
 ### Phase 4: User Experience (UX) Polish
 - [ ] **Hover Effects**: Parcels highlight and show a summary tooltip (e.g., Name, ID) when the mouse hovers over them.

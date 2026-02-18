@@ -1,3 +1,10 @@
+You have this list of features that I want you to implement
+
+Prepare the full tasks list of each of the features
+Then we will work on them one by one. 
+After validating a feature we should commit with clear commit messages
+Once a feature is done you should update the feature list and check the implemented feature (this sould be done with my confirmation)
+
 1. [x] La création de parcelles se fait depuis un terrain. it should be done also from the parcelles view
 2. [x] La création de documents se fait via les écrans de gestion de documents existants. I should also be able to upload documents and add them from the documents view
 3. [x] I should be able to link existing documents to terrain, cliens, parcelles, and contrats

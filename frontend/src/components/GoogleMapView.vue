@@ -36,6 +36,13 @@ const drawingHistory = ref<google.maps.LatLng[][]>([]);
 const historyIndex = ref(-1);
 const measurements = ref<{ edges: number[]; area: number }>({ edges: [], area: 0 });
 
+// Phase 3: Terrain & Parcel Management state
+const terrainCenterPin = ref<google.maps.Marker | null>(null);
+const terrainBoundary = ref<google.maps.Polygon | null>(null);
+const parcels = ref<google.maps.Polygon[]>([]);
+const coordinateInfoWindow = ref<google.maps.InfoWindow | null>(null);
+const drawingMode = ref<'terrain' | 'parcel' | null>(null);
+
 const initMap = async () => {
   try {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -145,7 +152,7 @@ const handleManualSearch = () => {
   const coordPattern = /^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/;
   const coordMatch = query.match(coordPattern);
 
-  if (coordMatch) {
+  if (coordMatch && coordMatch[1] && coordMatch[2]) {
     const lat = parseFloat(coordMatch[1]);
     const lng = parseFloat(coordMatch[2]);
 
@@ -337,14 +344,45 @@ const initDrawingManager = () => {
 const handlePolygonComplete = (polygon: google.maps.Polygon) => {
   console.log('Polygon completed');
 
-  // Remove previous polygon if exists
-  if (currentPolygon.value) {
-    console.log('Removing previous polygon');
-    currentPolygon.value.setMap(null);
+  // Validate polygon for self-intersection
+  const path = polygon.getPath();
+  if (!isValidPolygon(path)) {
+    console.log('Invalid polygon detected - self-intersecting');
+    alert('Polygone invalide : le polygone ne peut pas avoir de côtés qui se croisent');
+    polygon.setMap(null);
+    isDrawing.value = false;
+    drawingMode.value = null;
+    if (drawingManager.value) {
+      drawingManager.value.setDrawingMode(null);
+    }
+    return;
   }
 
-  currentPolygon.value = polygon;
+  // Handle different drawing modes
+  if (drawingMode.value === 'terrain') {
+    // Remove previous terrain boundary if exists
+    if (terrainBoundary.value) {
+      console.log('Removing previous terrain boundary');
+      terrainBoundary.value.setMap(null);
+    }
+    terrainBoundary.value = polygon;
+    console.log('Terrain boundary set');
+  } else if (drawingMode.value === 'parcel') {
+    // Add to parcels array
+    parcels.value.push(polygon);
+    console.log('Parcel added, total parcels:', parcels.value.length);
+  } else {
+    // Regular drawing mode
+    // Remove previous polygon if exists
+    if (currentPolygon.value) {
+      console.log('Removing previous polygon');
+      currentPolygon.value.setMap(null);
+    }
+    currentPolygon.value = polygon;
+  }
+
   isDrawing.value = false;
+  drawingMode.value = null;
 
   // Explicitly ensure polygon is editable
   polygon.setEditable(true);
@@ -358,16 +396,26 @@ const handlePolygonComplete = (polygon: google.maps.Polygon) => {
     drawingManager.value.setDrawingMode(null);
   }
 
-  // Save to history
-  saveToHistory();
+  // Save to history (only for regular polygons)
+  if (!drawingMode.value) {
+    saveToHistory();
+  }
 
   // Calculate measurements
   updateMeasurements();
 
   // Add listeners for vertex changes (drag-to-edit)
-  const path = polygon.getPath();
   google.maps.event.addListener(path, 'set_at', () => {
     console.log('Vertex moved (set_at)');
+    // Re-validate after edit
+    if (!isValidPolygon(path)) {
+      alert('Modification invalide : le polygone ne peut pas avoir de côtés qui se croisent');
+      // Revert changes via undo if available
+      if (canUndo.value) {
+        undo();
+      }
+      return;
+    }
     saveToHistory();
     updateMeasurements();
   });
@@ -485,8 +533,10 @@ const undo = () => {
   isUndoRedoing.value = true;
   historyIndex.value--;
   const coords = drawingHistory.value[historyIndex.value];
-  currentPolygon.value.setPath(coords);
-  updateMeasurements();
+  if (coords) {
+    currentPolygon.value.setPath(coords);
+    updateMeasurements();
+  }
   isUndoRedoing.value = false;
   console.log('Undo completed - new historyIndex:', historyIndex.value);
 };
@@ -501,8 +551,10 @@ const redo = () => {
   isUndoRedoing.value = true;
   historyIndex.value++;
   const coords = drawingHistory.value[historyIndex.value];
-  currentPolygon.value.setPath(coords);
-  updateMeasurements();
+  if (coords) {
+    currentPolygon.value.setPath(coords);
+    updateMeasurements();
+  }
   isUndoRedoing.value = false;
   console.log('Redo completed - new historyIndex:', historyIndex.value);
 };
@@ -545,6 +597,190 @@ const formatArea = (sqMeters: number): string => {
   return `${(sqMeters / 10000).toFixed(2)} ha`;
 };
 
+// ===== PHASE 3: TERRAIN & PARCEL MANAGEMENT =====
+
+// 1. Terrain Pinning - Drop a pin for terrain center
+const dropTerrainPin = () => {
+  if (!map.value) return;
+
+  // Enable map click to drop pin
+  google.maps.event.addListenerOnce(map.value, 'click', (event: google.maps.MapMouseEvent) => {
+    if (!event.latLng) return;
+
+    // Remove existing pin if any
+    if (terrainCenterPin.value) {
+      terrainCenterPin.value.setMap(null);
+    }
+
+    // Create new pin
+    terrainCenterPin.value = new google.maps.Marker({
+      position: event.latLng,
+      map: map.value,
+      title: 'Point central du terrain',
+      icon: {
+        url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+      },
+      draggable: true,
+    });
+
+    console.log('Terrain center pin dropped at:', event.latLng.lat(), event.latLng.lng());
+  });
+};
+
+// 2. Terrain Boundary Definition - Draw master boundary
+const drawTerrainBoundary = () => {
+  if (!drawingManager.value) return;
+
+  drawingMode.value = 'terrain';
+  isDrawing.value = true;
+  drawingManager.value.setOptions({
+    polygonOptions: {
+      fillColor: '#4CAF50',
+      fillOpacity: 0.2,
+      strokeColor: '#4CAF50',
+      strokeWeight: 3,
+      editable: true,
+      draggable: false,
+    },
+  });
+  drawingManager.value.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+};
+
+// 3. Parcel Sub-division - Draw parcels inside terrain
+const drawParcel = () => {
+  if (!drawingManager.value) return;
+
+  drawingMode.value = 'parcel';
+  isDrawing.value = true;
+  drawingManager.value.setOptions({
+    polygonOptions: {
+      fillColor: '#2196F3',
+      fillOpacity: 0.3,
+      strokeColor: '#2196F3',
+      strokeWeight: 2,
+      editable: true,
+      draggable: false,
+    },
+  });
+  drawingManager.value.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+};
+
+// 4. Shape Validation - Check for self-intersecting polygons
+const isValidPolygon = (path: google.maps.MVCArray<google.maps.LatLng>): boolean => {
+  const points: google.maps.LatLng[] = [];
+  for (let i = 0; i < path.getLength(); i++) {
+    points.push(path.getAt(i));
+  }
+
+  // Check for self-intersection using line segment intersection
+  for (let i = 0; i < points.length; i++) {
+    const line1Start = points[i]!;
+    const line1End = points[(i + 1) % points.length]!;
+
+    for (let j = i + 2; j < points.length; j++) {
+      // Skip adjacent edges
+      if (j === (i + points.length - 1) % points.length) continue;
+
+      const line2Start = points[j]!;
+      const line2End = points[(j + 1) % points.length]!;
+
+      if (doLinesIntersect(line1Start, line1End, line2Start, line2End)) {
+        return false; // Self-intersection detected
+      }
+    }
+  }
+
+  return true;
+};
+
+// Helper function to check if two line segments intersect
+const doLinesIntersect = (
+  p1: google.maps.LatLng,
+  p2: google.maps.LatLng,
+  p3: google.maps.LatLng,
+  p4: google.maps.LatLng
+): boolean => {
+  const ccw = (a: google.maps.LatLng, b: google.maps.LatLng, c: google.maps.LatLng) => {
+    return (c.lng() - a.lng()) * (b.lat() - a.lat()) > (b.lng() - a.lng()) * (c.lat() - a.lat());
+  };
+
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+};
+
+// 5. Coordinate Inspector - Show GPS coordinates on click
+const initCoordinateInspector = () => {
+  if (!map.value) return;
+
+  coordinateInfoWindow.value = new google.maps.InfoWindow();
+
+  // Add click listener to map for coordinate inspection
+  google.maps.event.addListener(map.value, 'click', (event: google.maps.MapMouseEvent) => {
+    if (event.latLng && coordinateInfoWindow.value) {
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+
+      coordinateInfoWindow.value.setContent(`
+        <div style="padding: 10px; font-family: Arial, sans-serif;">
+          <strong>Coordonnées GPS</strong><br/>
+          Latitude: ${lat.toFixed(6)}<br/>
+          Longitude: ${lng.toFixed(6)}
+        </div>
+      `);
+      coordinateInfoWindow.value.setPosition(event.latLng);
+      coordinateInfoWindow.value.open(map.value);
+    }
+  });
+};
+
+// 6. Shape Export - Export polygon data
+// TODO: This should save to backend and associate with terrain/parcel
+const exportShape = () => {
+  const position = terrainCenterPin.value?.getPosition();
+
+  const shapes: any = {
+    terrainCenter: position
+      ? {
+          lat: position.lat(),
+          lng: position.lng(),
+        }
+      : null,
+    terrainBoundary: terrainBoundary.value
+      ? {
+          coordinates: terrainBoundary.value
+            .getPath()
+            .getArray()
+            .map((point) => ({ lat: point.lat(), lng: point.lng() })),
+        }
+      : null,
+    parcels: parcels.value.map((parcel) => ({
+      coordinates: parcel
+        .getPath()
+        .getArray()
+        .map((point) => ({ lat: point.lat(), lng: point.lng() })),
+    })),
+    currentPolygon: currentPolygon.value
+      ? {
+          coordinates: currentPolygon.value
+            .getPath()
+            .getArray()
+            .map((point) => ({ lat: point.lat(), lng: point.lng() })),
+        }
+      : null,
+  };
+
+  console.log('Exported shapes:', shapes);
+  return shapes;
+};
+
+// Remove terrain center pin
+const removeTerrainPin = () => {
+  if (terrainCenterPin.value) {
+    terrainCenterPin.value.setMap(null);
+    terrainCenterPin.value = null;
+    console.log('Terrain center pin removed');
+  }
+};
+
 watch(
   () => [props.latitude, props.longitude],
   ([newLat, newLng]) => {
@@ -558,6 +794,9 @@ let escKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
 onMounted(() => {
   initMap();
+
+  // Initialize coordinate inspector
+  initCoordinateInspector();
 
   // Add keyboard shortcuts for drawing tools
   const keyHandler = (event: KeyboardEvent) => {
@@ -823,6 +1062,52 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Phase 3: Terrain & Parcel Management Tools -->
+    <div v-if="!loadError && !isLoading" class="terrain-tools">
+      <Button
+        v-if="!terrainCenterPin"
+        variant="secondary"
+        size="sm"
+        @click="dropTerrainPin"
+        title="Placer le point central du terrain"
+      >
+        📍 Point Central
+      </Button>
+      <Button
+        v-if="terrainCenterPin"
+        variant="destructive"
+        size="sm"
+        @click="removeTerrainPin"
+        title="Supprimer le point central"
+      >
+        ❌ Supprimer Pin
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        @click="drawTerrainBoundary"
+        title="Dessiner le périmètre du terrain"
+      >
+        🟩 Périmètre
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        @click="drawParcel"
+        title="Dessiner une parcelle"
+      >
+        🔵 Parcelle
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        @click="exportShape"
+        title="Exporter les formes"
+      >
+        💾 Exporter
+      </Button>
+    </div>
   </div>
 </template>
 
@@ -1024,6 +1309,19 @@ onUnmounted(() => {
   padding: 0.25rem;
   background: var(--color-bg-card);
   border-radius: 0.25rem;
+}
+
+.terrain-tools {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  background: var(--color-bg-secondary);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 999;
 }
 
 </style>
